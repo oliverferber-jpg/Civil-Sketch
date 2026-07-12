@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type UserProfile = {
   name: string;
@@ -11,28 +11,22 @@ type SignInPageProps = {
 };
 
 export default function SignInPage({ onSuccess }: SignInPageProps) {
+  const buttonRef = useRef<HTMLDivElement | null>(null);
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">(
-    "idle"
+    clientId ? "loading" : "ready"
   );
   const [message, setMessage] = useState(
-    "Sign in to continue to CivilSketch."
+    clientId
+      ? "Sign in to continue to CivilSketch."
+      : "Google sign-in is not configured yet. Use demo access below to preview the experience."
   );
-
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-  const backendBaseUrl =
-    import.meta.env.VITE_BACKEND_URL ??
-    import.meta.env.VITE_API_BASE_URL ??
-    "http://localhost:3000";
-  const authEndpoint = `${backendBaseUrl.replace(/\/$/, "")}/auth/google`;
 
   useEffect(() => {
     if (!clientId) {
-      setStatus("ready");
-      setMessage("Google sign-in is not configured yet. Use demo access to preview the experience.");
       return;
     }
-
-    setStatus("loading");
 
     const scriptId = "google-gsi-script";
 
@@ -73,6 +67,16 @@ export default function SignInPage({ onSuccess }: SignInPageProps) {
         },
       });
 
+      if (buttonRef.current) {
+        window.google.accounts.id.renderButton(buttonRef.current, {
+          theme: "outline",
+          size: "large",
+          text: "signin_with",
+          shape: "rectangular",
+          width: 320,
+        });
+      }
+
       setStatus("ready");
       setMessage("Continue with your Google account.");
     };
@@ -104,45 +108,6 @@ export default function SignInPage({ onSuccess }: SignInPageProps) {
     });
   };
 
-  const handleGoogleSignIn = async () => {
-    setStatus("loading");
-    setMessage("Sending sign-in request to the backend...");
-
-    try {
-      const response = await fetch(authEndpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ provider: "google" }),
-      });
-
-      if (!response.ok) {
-        throw new Error("backend_request_failed");
-      }
-
-      const data = (await response.json()) as {
-        user?: { name?: string; email?: string; picture?: string };
-      };
-
-      const user = data.user;
-
-      if (user) {
-        onSuccess({
-          name: user.name ?? "Google User",
-          email: user.email ?? "unknown@example.com",
-          picture: user.picture,
-        });
-        return;
-      }
-
-      throw new Error("missing_user_payload");
-    } catch {
-      setStatus("error");
-      setMessage("The backend sign-in request could not be completed.");
-    }
-  };
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-blue-900 to-slate-800 p-6 font-sans">
       <div className="w-full max-w-md rounded-3xl bg-white/95 p-8 shadow-2xl shadow-slate-950/25">
@@ -155,17 +120,11 @@ export default function SignInPage({ onSuccess }: SignInPageProps) {
         </div>
 
         <div className="mt-6 flex flex-col gap-3">
-          <button
-            onClick={handleGoogleSignIn}
-            disabled={status === "loading"}
-            className="w-full rounded-full bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
-          >
-            Sign in with Google
-          </button>
+          {clientId && <div ref={buttonRef} className="flex justify-center" />}
 
           <button
             onClick={handleDemoSignIn}
-            className="w-full rounded-full border border-slate-300 bg-white px-4 py-3 font-semibold text-slate-700 transition hover:bg-slate-100"
+            className="w-full rounded-full bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700"
           >
             Continue as demo user
           </button>
