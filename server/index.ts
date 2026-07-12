@@ -3,9 +3,24 @@ import express, { type Express, type Request, type Response } from 'express';
 const app: Express = express();
 const port = 3000;
 
+const notes = [{
+  id: '0',
+  name: 'John',
+  number: '123-456-7890'
+}]
+
+
 
 app.get('/', (req: Request, res: Response) => {
-  res.send('Hello World!');
+  res.send('Hello Word!');
+});
+
+app.get('/h', (req: Request, res: Response) => {
+  res.send('test');
+});
+
+app.get('/', (req: Request, res: Response) => {
+  res.send('notes:' + notes);
 });
 
 app.listen(port, () => {
