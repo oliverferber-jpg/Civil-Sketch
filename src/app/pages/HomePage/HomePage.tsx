@@ -1,6 +1,6 @@
 import { useState } from "react";
-import DrawingPad from "./DrawingPad";
-import SignInPage from "./SignInPage";
+import DrawingPadPage from "../DrawingPadPage/DrawingPadPage";
+import SignInPage from "../SignInPage/SignInPage";
 
 type UserProfile = {
   name: string;
@@ -47,7 +47,7 @@ export default function App() {
           Sign out
         </button>
       </div>
-      <DrawingPad />
+      <DrawingPadPage />
     </div>
   );
 }
