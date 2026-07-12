@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Stage, Layer, Line } from "react-konva";
 import type Konva from "konva";
 
@@ -14,7 +14,9 @@ export default function DrawingPadCanvas() {
   const [tool, setTool] = useState<Tool>("pen");
   const [color, setColor] = useState("#2563eb");
   const [lines, setLines] = useState<DrawLine[]>([]);
+  const [stageSize, setStageSize] = useState({ width: 900, height: 600 });
   const isDrawing = useRef(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const palette = ["#111827", "#ef4444", "#10b981", "#2563eb", "#f59e0b", "#8b5cf6"];
 
   const handlePointerDown = (e: Konva.KonvaEventObject<PointerEvent>) => {
@@ -59,28 +61,55 @@ export default function DrawingPadCanvas() {
     isDrawing.current = false;
   };
 
-  return (
-    <div>
-      <div style={{ marginBottom: "12px" }}>
-        <button onClick={() => setTool("pen")}>Pen</button>
-        <button onClick={() => setTool("eraser")}>Eraser</button>
-        <button onClick={() => setLines([])}>Clear</button>
+  useEffect(() => {
+    const updateStageSize = () => {
+      if (!containerRef.current) return;
 
-        <div style={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-          <span style={{ fontWeight: 600 }}>Color:</span>
+      const parentWidth = containerRef.current.clientWidth;
+      const availableHeight = window.innerHeight - 220;
+      const width = Math.max(320, parentWidth - 32);
+      const height = Math.max(360, Math.min(availableHeight, parentWidth * 0.7));
+
+      setStageSize({ width, height });
+    };
+
+    updateStageSize();
+    window.addEventListener("resize", updateStageSize);
+
+    return () => window.removeEventListener("resize", updateStageSize);
+  }, []);
+
+  return (
+    <div ref={containerRef} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <button
+          onClick={() => setTool("pen")}
+          className={`rounded-full px-3 py-2 text-sm font-semibold ${tool === "pen" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-700"}`}
+        >
+          Pen
+        </button>
+        <button
+          onClick={() => setTool("eraser")}
+          className={`rounded-full px-3 py-2 text-sm font-semibold ${tool === "eraser" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-700"}`}
+        >
+          Eraser
+        </button>
+        <button
+          onClick={() => setLines([])}
+          className="rounded-full bg-rose-500 px-3 py-2 text-sm font-semibold text-white"
+        >
+          Clear
+        </button>
+
+        <div className="ml-2 flex flex-wrap items-center gap-2">
+          <span className="text-sm font-semibold text-slate-700">Color:</span>
           {palette.map((swatch) => (
             <button
               key={swatch}
               onClick={() => setColor(swatch)}
               aria-label={`Select ${swatch}`}
-              style={{
-                width: "24px",
-                height: "24px",
-                borderRadius: "999px",
-                border: color === swatch ? "2px solid #111827" : "1px solid #d1d5db",
-                background: swatch,
-                cursor: "pointer",
-              }}
+              className={`h-6 w-6 rounded-full border ${color === swatch ? "border-2 border-slate-900" : "border-slate-300"}`}
+              style={{ backgroundColor: swatch }}
             />
           ))}
           <input
@@ -88,17 +117,19 @@ export default function DrawingPadCanvas() {
             value={color}
             onChange={(e) => setColor(e.target.value)}
             aria-label="Choose drawing color"
+            className="h-8 w-8 cursor-pointer rounded-full border border-slate-300 bg-transparent p-0"
           />
         </div>
       </div>
 
       <Stage
-        width={900}
-        height={600}
+        width={stageSize.width}
+        height={stageSize.height}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        style={{ border: "1px solid black" }}
+        className="w-full rounded-xl border border-slate-300"
+        style={{ border: "1px solid #cbd5e1", width: "100%", height: stageSize.height }}
       >
         <Layer>
           {lines.map((line, i) => (

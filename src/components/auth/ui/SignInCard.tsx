@@ -108,81 +108,30 @@ export default function SignInPage({ onSuccess }: SignInPageProps) {
   };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%)",
-        padding: "24px",
-        fontFamily: "Inter, Arial, sans-serif",
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "440px",
-          background: "rgba(255,255,255,0.95)",
-          borderRadius: "24px",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
-          padding: "36px 28px",
-        }}
-      >
-        <div style={{ marginBottom: "18px" }}>
-          <p
-            style={{
-              margin: 0,
-              color: "#2563eb",
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.12em",
-              fontSize: "0.8rem",
-            }}
-          >
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-blue-900 to-slate-800 p-6 font-sans">
+      <div className="w-full max-w-md rounded-3xl bg-white/95 p-8 shadow-2xl shadow-slate-950/25">
+        <div className="mb-5">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-600">
             CivilSketch
           </p>
-          <h1 style={{ margin: "8px 0 10px", fontSize: "1.9rem", color: "#111827" }}>
-            Welcome back
-          </h1>
-          <p style={{ margin: 0, color: "#4b5563", lineHeight: 1.5 }}>
-            {message}
-          </p>
+          <h1 className="mt-2 text-3xl font-semibold text-slate-900">Welcome back</h1>
+          <p className="mt-2 leading-6 text-slate-600">{message}</p>
         </div>
 
-        <div style={{ marginTop: "22px" }}>
+        <div className="mt-6">
           {clientId ? (
-            <div
-              ref={buttonRef}
-              style={{ display: "flex", justifyContent: "center" }}
-            />
+            <div ref={buttonRef} className="flex justify-center" />
           ) : (
             <button
               onClick={handleDemoSignIn}
-              style={{
-                width: "100%",
-                padding: "12px 16px",
-                borderRadius: "999px",
-                border: "none",
-                background: "#2563eb",
-                color: "white",
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
+              className="w-full rounded-full bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700"
             >
               Continue as demo user
             </button>
           )}
         </div>
 
-        <div
-          style={{
-            marginTop: "18px",
-            fontSize: "0.9rem",
-            color: "#6b7280",
-            textAlign: "center",
-          }}
-        >
+        <div className="mt-4 text-center text-sm text-slate-500">
           {status === "loading" && "Loading Google sign-in..."}
           {status === "error" && "Authentication could not be completed."}
           {status === "ready" && "Secure sign-in with Google"}
