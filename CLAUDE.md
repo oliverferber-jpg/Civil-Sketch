@@ -96,6 +96,22 @@ Relational tables (PostgreSQL), replacing the earlier Firestore-collection sketc
 - `subscriptions` — **proposed, not confirmed.** Needed for the planned [Navigation & Auth Flow](#8-navigation--auth-flow-planned) subscription check: likely id, user_id (FK), status, plan, created_at. Not built, no schema/migration exists.
 - `user_preferences` — **proposed, not confirmed.** Needed for the planned Preference Page in the same flow: likely id, user_id (FK), plus whatever preference fields that page collects (undefined so far). Not built, no schema/migration exists.
 
+## Backend Scaffold (planned)
+
+**Designed 2026-07-12, not started.** Captures the concrete shape of the first backend slice so it doesn't need to be re-derived later — see Current Status for why it's paused.
+
+Minimal first slice, scoped to unblock the Projects/File flow in [Navigation & Auth Flow](#8-navigation--auth-flow-planned):
+
+- **Framework:** Express (TypeScript), matching the "TypeScript throughout" convention.
+- **Local Postgres:** Docker Compose (`postgres:16-alpine`, dev-only credentials) — no hosted dev DB.
+- **ORM:** Prisma, schema at `server/db/schema.prisma`. One initial migration covering the 8 already-confirmed Data Model tables (`inspections`, `faces`, `defects`, `photos`, `defect_types`, `checklist_templates`, `checklist_items`, `users`) — excluding the proposed/unconfirmed `subscriptions`/`user_preferences`. `inspections.inspector` becomes `inspectorId` (FK to `users.id`). UUID primary keys (forward-looking for offline sync, so client-generated IDs don't collide).
+- **Initial routes only:** `GET /api/health`, `GET /api/inspections`, `POST /api/inspections` — not the full `faces`/`defects`/`photos`/`checklists` set from the Suggested Folder Structure; those arrive with their own features later.
+- **Dev wiring:** Vite proxy for `/api` (avoids adding a `cors` dependency), new npm scripts (`dev:server`, `dev:all`, `prisma:migrate`, `prisma:generate`, `prisma:studio`).
+- **New dependencies this would require** (not installed — recorded for when this is actually built, same pattern as the Prisma/react-router-dom notes above): `express`, `@prisma/client`, `prisma`, `tsx`, `@types/express`, `concurrently`; drop the currently unused `nodemon`/`ts-node` devDependencies in favor of `tsx`.
+- **Explicitly out of scope even once built:** real Google ID-token verification, offline sync, the `subscriptions`/`user_preferences` tables, the file/photo storage interface.
+
+**Why it's paused:** an unmerged remote branch `origin/Server` (ariella.litwack@gmail.com) has a partial, broken attempt at this (raw Express + `pg`, not Prisma; `app.listen(PORT, ...)` references an undefined `PORT` and would crash as committed). The team decided not to build on that branch, and to coordinate with Ariella before starting fresh work here — that conversation, and what happens to `origin/Server`, isn't resolved by this plan.
+
 ## Conventions
 
 - Use functional React components with hooks (no class components)
@@ -125,7 +141,7 @@ server/             # backend (Node.js API)
 ## Current Status (as of 2026-07-12)
 
 - **Frontend scaffold exists:** `HomePage` → `SignInPage`/`SignInCard` → `DrawingPadPage`/`DrawingPadCanvas` (Konva-based canvas with the three drawing colors already implemented). No defect panel, photos, checklists, export, or offline sync yet.
-- **Backend does not exist.** There's no `server/` directory, no API routes, no DB connection. This needs to be scaffolded from scratch before any real GET/POST work can happen.
+- **Backend does not exist.** There's no `server/` directory, no API routes, no DB connection. This needs to be scaffolded from scratch before any real GET/POST work can happen. A concrete plan for the first slice already exists — see [Backend Scaffold (planned)](#backend-scaffold-planned) — but is paused pending coordination with a teammate over an unmerged branch that attempted the same thing.
 - **Google sign-in (frontend half) fixed 2026-07-12.** `src/components/auth/ui/SignInCard.tsx` previously had a broken stub (a custom button that `POST`ed a fake `{ provider: "google" }` payload to a nonexistent backend) alongside dead code for the real Google Identity Services flow. That's been cleaned up: the component now renders Google's real sign-in button (via `google.accounts.id.renderButton`) when `VITE_GOOGLE_CLIENT_ID` is set, and falls back to a "Continue as demo user" button when it isn't. Ambient types for `window.google` were added at `src/types/google-identity.d.ts` (previously untyped, would fail `tsc`).
   - **Still client-side only.** The callback decodes the Google-issued JWT directly in the browser (`atob(...)`) and trusts it as-is — there is still no backend verifying the token's signature. This is fine for previewing the UI, but is **not real authentication** yet: anyone could forge a similarly-shaped payload. Real auth still requires the backend step described earlier (verify the ID token server-side with `google-auth-library`, issue the app's own session) — not done yet, since it needs the backend to exist first.
   - `.env.example` now documents `VITE_GOOGLE_CLIENT_ID`; copy it to `.env.local` and fill in a real Google OAuth Client ID (from Google Cloud Console) to test the real button locally. `.gitignore` now excludes `.env`.
