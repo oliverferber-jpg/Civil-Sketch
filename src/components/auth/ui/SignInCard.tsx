@@ -154,13 +154,20 @@ export default function SignInPage({ onSuccess }: SignInPageProps) {
           <p className="mt-2 leading-6 text-slate-600">{message}</p>
         </div>
 
-        <div className="mt-6">
+        <div className="mt-6 flex flex-col gap-3">
           <button
             onClick={handleGoogleSignIn}
             disabled={status === "loading"}
             className="w-full rounded-full bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
           >
-            {clientId ? "Sign in with Google" : "Sign in with Google"}
+            Sign in with Google
+          </button>
+
+          <button
+            onClick={handleDemoSignIn}
+            className="w-full rounded-full border border-slate-300 bg-white px-4 py-3 font-semibold text-slate-700 transition hover:bg-slate-100"
+          >
+            Continue as demo user
           </button>
         </div>
 
