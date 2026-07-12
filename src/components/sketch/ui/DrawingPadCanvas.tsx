@@ -60,27 +60,36 @@ export default function DrawingPadCanvas() {
   };
 
   return (
-    <div>
-      <div style={{ marginBottom: "12px" }}>
-        <button onClick={() => setTool("pen")}>Pen</button>
-        <button onClick={() => setTool("eraser")}>Eraser</button>
-        <button onClick={() => setLines([])}>Clear</button>
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <button
+          onClick={() => setTool("pen")}
+          className={`rounded-full px-3 py-2 text-sm font-semibold ${tool === "pen" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-700"}`}
+        >
+          Pen
+        </button>
+        <button
+          onClick={() => setTool("eraser")}
+          className={`rounded-full px-3 py-2 text-sm font-semibold ${tool === "eraser" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-700"}`}
+        >
+          Eraser
+        </button>
+        <button
+          onClick={() => setLines([])}
+          className="rounded-full bg-rose-500 px-3 py-2 text-sm font-semibold text-white"
+        >
+          Clear
+        </button>
 
-        <div style={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-          <span style={{ fontWeight: 600 }}>Color:</span>
+        <div className="ml-2 flex flex-wrap items-center gap-2">
+          <span className="text-sm font-semibold text-slate-700">Color:</span>
           {palette.map((swatch) => (
             <button
               key={swatch}
               onClick={() => setColor(swatch)}
               aria-label={`Select ${swatch}`}
-              style={{
-                width: "24px",
-                height: "24px",
-                borderRadius: "999px",
-                border: color === swatch ? "2px solid #111827" : "1px solid #d1d5db",
-                background: swatch,
-                cursor: "pointer",
-              }}
+              className={`h-6 w-6 rounded-full border ${color === swatch ? "border-2 border-slate-900" : "border-slate-300"}`}
+              style={{ backgroundColor: swatch }}
             />
           ))}
           <input
@@ -88,6 +97,7 @@ export default function DrawingPadCanvas() {
             value={color}
             onChange={(e) => setColor(e.target.value)}
             aria-label="Choose drawing color"
+            className="h-8 w-8 cursor-pointer rounded-full border border-slate-300 bg-transparent p-0"
           />
         </div>
       </div>
@@ -98,7 +108,8 @@ export default function DrawingPadCanvas() {
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        style={{ border: "1px solid black" }}
+        className="rounded-xl border border-slate-300"
+        style={{ border: "1px solid #cbd5e1" }}
       >
         <Layer>
           {lines.map((line, i) => (
