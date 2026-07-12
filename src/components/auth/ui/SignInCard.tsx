@@ -20,7 +20,7 @@ export default function SignInPage({ onSuccess }: SignInPageProps) {
   const [message, setMessage] = useState(
     clientId
       ? "Sign in to continue to CivilSketch."
-      : "Google sign-in is not configured yet. Use demo access to preview the experience."
+      : "Google sign-in is not configured yet. Use demo access below to preview the experience."
   );
 
   useEffect(() => {
@@ -120,16 +120,14 @@ export default function SignInPage({ onSuccess }: SignInPageProps) {
         </div>
 
         <div className="mt-6 flex flex-col gap-3">
-          {clientId ? (
-            <div ref={buttonRef} className="flex justify-center" />
-          ) : (
-            <button
-              onClick={handleDemoSignIn}
-              className="w-full rounded-full bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700"
-            >
-              Continue as demo user
-            </button>
-          )}
+          {clientId && <div ref={buttonRef} className="flex justify-center" />}
+
+          <button
+            onClick={handleDemoSignIn}
+            className="w-full rounded-full bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700"
+          >
+            Continue as demo user
+          </button>
         </div>
 
         <div className="mt-4 text-center text-sm text-slate-500">
