@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Stage, Layer, Line } from "react-konva";
 import type Konva from "konva";
+import type { DefectType, PlacedDefect } from "../../../types/defect";
+import DefectMarkerLayer from "../../../features/defects/DefectMarkerLayer";
 
 type Tool = "pen" | "eraser";
 
@@ -10,7 +12,19 @@ type DrawLine = {
   points: number[];
 };
 
-export default function DrawingPadCanvas() {
+type DrawingPadCanvasProps = {
+  armedDefectTypeId?: string | null;
+  onCanvasTap?: (position: { x: number; y: number }) => void;
+  placedDefects?: PlacedDefect[];
+  defectTypes?: DefectType[];
+};
+
+export default function DrawingPadCanvas({
+  armedDefectTypeId = null,
+  onCanvasTap,
+  placedDefects = [],
+  defectTypes = [],
+}: DrawingPadCanvasProps) {
   const [tool, setTool] = useState<Tool>("pen");
   const [color, setColor] = useState("#2563eb");
   const [lines, setLines] = useState<DrawLine[]>([]);
@@ -20,12 +34,17 @@ export default function DrawingPadCanvas() {
   const palette = ["#111827", "#ef4444", "#10b981", "#2563eb", "#f59e0b", "#8b5cf6"];
 
   const handlePointerDown = (e: Konva.KonvaEventObject<PointerEvent>) => {
-    isDrawing.current = true;
-
     const stage = e.target.getStage();
     const pos = stage?.getPointerPosition();
 
     if (!pos) return;
+
+    if (armedDefectTypeId) {
+      onCanvasTap?.(pos);
+      return;
+    }
+
+    isDrawing.current = true;
 
     setLines((prevLines) => [
       ...prevLines,
@@ -144,6 +163,7 @@ export default function DrawingPadCanvas() {
               globalCompositeOperation={line.tool === "eraser" ? "destination-out" : "source-over"}
             />
           ))}
+          <DefectMarkerLayer placedDefects={placedDefects} defectTypes={defectTypes} />
         </Layer>
       </Stage>
     </div>

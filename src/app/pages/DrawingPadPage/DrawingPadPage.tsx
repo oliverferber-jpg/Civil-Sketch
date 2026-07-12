@@ -1,10 +1,16 @@
 import DrawingPadCanvas from "../../../components/sketch/ui/DrawingPadCanvas";
+import DefectPanel from "../../../features/defects/DefectPanel";
+import { useDefectPlacement } from "../../../features/defects/useDefectPlacement";
+import { useDefectTypes } from "../../../features/defects/useDefectTypes";
 
 type DrawingPadPageProps = {
   onBack?: () => void;
 };
 
 export default function DrawingPadPage({ onBack }: DrawingPadPageProps) {
+  const { armedDefectTypeId, armDefectType, placedDefects, placeDefect } = useDefectPlacement();
+  const { defectTypes, addType, renameType, removeType, isTypeInUse } = useDefectTypes(placedDefects);
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex justify-end">
@@ -18,7 +24,25 @@ export default function DrawingPadPage({ onBack }: DrawingPadPageProps) {
           </button>
         ) : null}
       </div>
-      <DrawingPadCanvas />
+      <div className="flex flex-col gap-4 lg:flex-row">
+        <div className="lg:flex-1">
+          <DrawingPadCanvas
+            armedDefectTypeId={armedDefectTypeId}
+            onCanvasTap={placeDefect}
+            placedDefects={placedDefects}
+            defectTypes={defectTypes}
+          />
+        </div>
+        <DefectPanel
+          defectTypes={defectTypes}
+          armedDefectTypeId={armedDefectTypeId}
+          onArmDefectType={armDefectType}
+          onAddType={addType}
+          onRenameType={renameType}
+          onRemoveType={removeType}
+          isTypeInUse={isTypeInUse}
+        />
+      </div>
     </div>
   );
 }
