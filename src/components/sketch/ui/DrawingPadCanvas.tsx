@@ -19,6 +19,8 @@ type DrawingPadCanvasProps = {
   onCanvasTap?: (position: { x: number; y: number }) => void;
   placedDefects?: PlacedDefect[];
   defectTypes?: DefectType[];
+  pendingPosition?: { x: number; y: number } | null;
+  onCancelPending?: () => void;
 };
 
 const CANVAS_MIN_WIDTH = 320;
@@ -38,6 +40,8 @@ export default function DrawingPadCanvas({
   onCanvasTap,
   placedDefects = [],
   defectTypes = [],
+  pendingPosition = null,
+  onCancelPending,
 }: DrawingPadCanvasProps) {
   const [tool, setTool] = useState<Tool>("pen");
   const [color, setColor] = useState<string>(DRAWING_COLORS[1].value);
@@ -115,6 +119,19 @@ export default function DrawingPadCanvas({
     return () => window.removeEventListener("resize", updateStageSize);
   }, []);
 
+  useEffect(() => {
+    if (!armedDefectTypeId) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onCancelPending?.();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [armedDefectTypeId, onCancelPending]);
+
   return (
     <Card ref={containerRef}>
       <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -182,7 +199,12 @@ export default function DrawingPadCanvas({
               globalCompositeOperation={line.tool === "eraser" ? "destination-out" : "source-over"}
             />
           ))}
-          <DefectMarkerLayer placedDefects={placedDefects} defectTypes={defectTypes} />
+          <DefectMarkerLayer
+            placedDefects={placedDefects}
+            defectTypes={defectTypes}
+            pendingPosition={pendingPosition}
+            armedDefectTypeId={armedDefectTypeId}
+          />
         </Layer>
       </Stage>
 

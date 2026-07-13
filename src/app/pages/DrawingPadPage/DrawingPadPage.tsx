@@ -11,7 +11,8 @@ type DrawingPadPageProps = {
 };
 
 export default function DrawingPadPage({ title = "Untitled drawing", onBack }: DrawingPadPageProps) {
-  const { armedDefectTypeId, armDefectType, placedDefects, placeDefect } = useDefectPlacement();
+  const { armedDefectTypeId, armDefectType, placedDefects, placeDefect, pendingPosition, cancelPending } =
+    useDefectPlacement();
   const { defectTypes, addType, renameType, removeType, isTypeInUse } = useDefectTypes(placedDefects);
 
   return (
@@ -34,6 +35,8 @@ export default function DrawingPadPage({ title = "Untitled drawing", onBack }: D
             onCanvasTap={placeDefect}
             placedDefects={placedDefects}
             defectTypes={defectTypes}
+            pendingPosition={pendingPosition}
+            onCancelPending={cancelPending}
           />
         </div>
         <DefectPanel

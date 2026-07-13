@@ -1,29 +1,41 @@
 import { useState } from "react";
 import type { PlacedDefect } from "../../types/defect";
 
-const LABEL_OFFSET = { x: 40, y: -40 };
+type Point = { x: number; y: number };
 
 export function useDefectPlacement() {
   const [armedDefectTypeId, setArmedDefectTypeId] = useState<string | null>(null);
   const [placedDefects, setPlacedDefects] = useState<PlacedDefect[]>([]);
+  const [pendingPosition, setPendingPosition] = useState<Point | null>(null);
 
   const armDefectType = (id: string) => {
     setArmedDefectTypeId((current) => (current === id ? null : id));
+    setPendingPosition(null);
   };
 
-  const placeDefect = (position: { x: number; y: number }) => {
+  const cancelPending = () => {
+    setPendingPosition(null);
+  };
+
+  const placeDefect = (position: Point) => {
     if (!armedDefectTypeId) return;
+
+    if (!pendingPosition) {
+      setPendingPosition(position);
+      return;
+    }
 
     setPlacedDefects((prev) => [
       ...prev,
       {
         id: crypto.randomUUID(),
         defectTypeId: armedDefectTypeId,
-        position,
-        labelPosition: { x: position.x + LABEL_OFFSET.x, y: position.y + LABEL_OFFSET.y },
+        position: pendingPosition,
+        labelPosition: position,
       },
     ]);
+    setPendingPosition(null);
   };
 
-  return { armedDefectTypeId, armDefectType, placedDefects, placeDefect };
+  return { armedDefectTypeId, armDefectType, placedDefects, placeDefect, pendingPosition, cancelPending };
 }

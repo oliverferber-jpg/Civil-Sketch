@@ -4,9 +4,20 @@ import type { DefectType, PlacedDefect } from "../../types/defect";
 type DefectMarkerLayerProps = {
   placedDefects: PlacedDefect[];
   defectTypes: DefectType[];
+  pendingPosition?: { x: number; y: number } | null;
+  armedDefectTypeId?: string | null;
 };
 
-export default function DefectMarkerLayer({ placedDefects, defectTypes }: DefectMarkerLayerProps) {
+export default function DefectMarkerLayer({
+  placedDefects,
+  defectTypes,
+  pendingPosition = null,
+  armedDefectTypeId = null,
+}: DefectMarkerLayerProps) {
+  const pendingDefectType = pendingPosition
+    ? defectTypes.find((type) => type.id === armedDefectTypeId)
+    : undefined;
+
   return (
     <>
       {placedDefects.map((defect) => {
@@ -86,6 +97,33 @@ export default function DefectMarkerLayer({ placedDefects, defectTypes }: Defect
           </Label>
         );
       })}
+      {pendingPosition && pendingDefectType ? (
+        <>
+          <Circle
+            key="pending-marker"
+            x={pendingPosition.x}
+            y={pendingPosition.y}
+            radius={14}
+            fill={pendingDefectType.color}
+            stroke="white"
+            strokeWidth={2}
+            opacity={0.6}
+          />
+          <Text
+            key="pending-marker-abbr"
+            x={pendingPosition.x - 10}
+            y={pendingPosition.y - 7}
+            width={20}
+            align="center"
+            text={pendingDefectType.abbreviation}
+            fontSize={10}
+            fontStyle="bold"
+            fill="white"
+            opacity={0.6}
+            listening={false}
+          />
+        </>
+      ) : null}
     </>
   );
 }
