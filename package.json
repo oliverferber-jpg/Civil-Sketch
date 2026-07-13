@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:server": "tsx server/index.ts",
+    "dev:server": "tsx --env-file=.env server/index.ts",
+    "dev:all": "concurrently -n frontend,backend -c blue,magenta \"npm:dev\" \"npm:dev:server\"",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -38,6 +39,7 @@
     "@typescript-eslint/eslint-plugin": "^8.63.0",
     "@typescript-eslint/parser": "^8.63.0",
     "@vitejs/plugin-react": "^6.0.3",
+    "concurrently": "^10.0.3",
     "eslint": "^10.6.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",

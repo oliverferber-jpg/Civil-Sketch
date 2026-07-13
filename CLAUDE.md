@@ -8,7 +8,7 @@ An app for bridge inspectors to use in the field, replacing paper-based defect m
 
 - **Frontend:** React + TypeScript, built with Vite, styled with Tailwind CSS
 - **Backend:** Node.js API server (REST) — sits between the frontend and the database, since PostgreSQL (unlike Firestore) can't be reached directly from client code. **As of 2026-07-14**, the real Express 5 + Prisma backend from `origin/backendData` (`server/index.ts` mounting a `projects` router, Prisma-backed service layer) has been merged onto `integration/merge-backend-data` alongside `main`'s frontend work. See [Backend Scaffold](#backend-scaffold) for what's implemented and what's still needed before it's runnable (local Postgres + first migration).
-- **Database:** PostgreSQL, via Prisma. Schema exists (`prisma/schema.prisma`, `Project`/`Drawing` models) but has never been migrated — no `prisma/migrations/` directory, no DB provisioned yet.
+- **Database:** PostgreSQL, via Prisma. Schema exists (`prisma/schema.prisma`, `Project`/`Drawing` models) but has never been migrated — no `prisma/migrations/` directory, no DB provisioned yet. **Decided 2026-07-14:** local/dev Postgres is a hosted **Neon** free-tier project, not Docker Compose, a native install, or Supabase — production will use a managed Postgres regardless, so this matches dev to the real deployment target from day one. See the "Get the backend running" roadmap for the full rationale and provisioning steps.
 - **File storage:** Local disk for now (early development). PostgreSQL isn't well suited to storing binary files directly. Must be swapped for persistent cloud object storage (e.g. Cloudflare R2 or AWS S3) before deploying anywhere with ephemeral disks — most hosting platforms (Render, Fly, Railway, Heroku, etc.) don't persist local disk across redeploys. Keep local-disk file access isolated behind a small storage interface so this swap is cheap later.
 - **Version Control:** GitHub
 
@@ -112,7 +112,7 @@ Relational tables (PostgreSQL), replacing the earlier Firestore-collection sketc
 
 ## Backend Scaffold
 
-**Implemented, merged onto `integration/merge-backend-data` as of 2026-07-14, but not runnable out of the box — see "What's missing to actually run this" below.** This replaces the earlier "planned, not started" version of this section now that real code exists and has been merged.
+**Implemented and now actually runnable, as of 2026-07-14 (branch `chore/backend-neon-setup`).** The gaps listed in "What's missing to actually run this" below have all been closed: a real Neon Postgres database is provisioned, the initial migration (`prisma/migrations/20260713223526_init/`) has been created and applied, `server/index.ts` loads `DATABASE_URL` from a real `.env` via `npm run dev:server`'s `--env-file` flag, and the full create/list-project flow has been verified end-to-end (curl + through the actual UI) against the live database. Each developer still needs their **own** `DATABASE_URL` in their local `.env` (gitignored, never committed) — either their own Neon project/branch or one shared by the team.
 
 ### What's implemented
 
@@ -132,12 +132,16 @@ Relational tables (PostgreSQL), replacing the earlier Firestore-collection sketc
 - **Frontend wiring:** `src/api/projects.ts` (plain `fetch`, no axios client) calls all four routes above. `HomePage`/`StartPage`/`ProjectPage` do real data fetching with loading/error states, keeping `main`'s newer UI shells. A new `ApiTestPage.tsx` debug view (reachable via a 4th `"api-test"` state in `HomePage`'s hand-rolled view switch) exists purely to manually exercise `GET /api/projects` and `GET /api/projects/:id` during development.
 - **Dev wiring:** Vite proxies `/api` → `http://localhost:3000` (`vite.config.ts`), so the frontend can call relative `/api/...` paths with no `cors` package needed, same as originally planned.
 
-### What's missing to actually run this
+### What was missing to run this (resolved 2026-07-14)
 
-- **No migrations exist.** `prisma/migrations/` doesn't exist — the schema has never been migrated against a real database. First run needs `prisma migrate dev` to generate an initial migration.
-- **Prisma Client isn't generated locally** — `node_modules/@prisma` isn't present in this checkout. Needs `npm install && npm run prisma:generate` before the server can start at all.
-- **No local Postgres setup exists.** No Docker Compose file anywhere in the repo, despite that being the original plan for local dev Postgres. A developer has to stand up Postgres by hand right now.
-- **The running server doesn't load `.env`.** Nothing in `server/` imports `dotenv`; only `prisma.config.ts` does (for the Prisma CLI). So `DATABASE_URL`/`PORT` in `.env`/`.env.local` reach `prisma generate`/`prisma migrate` but **not** `server/index.ts` — the server only sees real OS environment variables as committed today.
+All of the following are now done — kept here as a record of what each step required:
+
+- **Migrations:** `prisma/migrations/20260713223526_init/` created via `npm run prisma:migrate -- --name init` and applied to a real Neon database, after explicit user go-ahead per the migration guardrail.
+- **Prisma Client:** generated via `npm run prisma:generate` against the real `DATABASE_URL`.
+- **Local Postgres:** provisioned as a hosted Neon free-tier project rather than Docker Compose/native install (see the Tech Stack decision above for why).
+- **Env loading:** `server/index.ts` still doesn't import `dotenv` directly, but `dev:server`'s script (`package.json`) now runs `tsx --env-file=.env server/index.ts`, using Node's native env-file support (v20.6+) instead. `DATABASE_URL` lives in a plain `.env` (not `.env.local`) because `prisma.config.ts`'s `dotenv/config` only reads `.env` by default — see the `.env.example` split above.
+
+**Still true / worth knowing:** each developer needs their own `DATABASE_URL` in a local `.env`; there's still no Docker Compose file for local Postgres (see the Neon decision above for why that's fine here). **Resolved 2026-07-14:** added `npm run dev:all` (via a new `concurrently` devDependency, approved by the user) to run frontend + backend together in one terminal with labeled/colored output — added directly in response to a real incident where the Vite dev server silently died between sessions while Express stayed up, producing a confusing "Could not load projects from the backend." error. `npm run dev`/`npm run dev:server` still work individually too.
 
 ### Other things worth flagging (deliberately not fixed in the merge — see Branch/Team Status; Guardrails say ask first)
 
@@ -146,7 +150,7 @@ Relational tables (PostgreSQL), replacing the earlier Firestore-collection sketc
 - **`server/server.env`** is committed directly to git with placeholder DB credentials (`PORT`, `DB_USER`, `DB_HOST`, `DB_NAME`, `DB_PASSWORD`, `DB_PORT`) instead of following the `.env`/`.env.example` + `.gitignore` pattern the frontend already uses. Worth cleaning up before real credentials ever land there.
 - **Two competing ways to start the server:** `npm run dev:server` (`tsx`, matches the intended setup) vs. `npm run server` (`node --loader ts-node/esm`, a deprecated/experimental flag). Both `ts-node` and `tsx` remain installed as devDependencies — the original plan said to drop `ts-node`/`nodemon` in favor of `tsx`, but neither was actually removed.
 - **`src/types/project.ts` (singular, `main`) and `src/types/projects.ts` (plural, `backendData`)** both still exist post-merge, defining the same shape — left unconsolidated deliberately to keep the merge diff small.
-- **No `dev:all` script / no `concurrently` dependency** — running frontend + backend together still means two terminals (`npm run dev` and `npm run dev:server`).
+- ~~**No `dev:all` script / no `concurrently` dependency**~~ — resolved 2026-07-14, see Backend Scaffold above.
 
 ## Conventions
 
@@ -176,7 +180,7 @@ server/             # backend (Node.js API)
 
 ## Current Status (as of 2026-07-14, `integration/merge-backend-data`)
 
-**Backend:** see [Backend Scaffold](#backend-scaffold) above for the full picture — real Express + Prisma routes/service layer exist for `Project`/`Drawing`, merged in from `backendData`, but the setup isn't runnable without manual DB provisioning, migrations, and a Prisma Client install first.
+**Backend:** see [Backend Scaffold](#backend-scaffold) above for the full picture — real Express + Prisma routes/service layer exist for `Project`/`Drawing`, merged in from `backendData`, **and it's now actually runnable**: a Neon Postgres database is provisioned and migrated, and the create/list-project flow has been verified end-to-end (`chore/backend-neon-setup` branch).
 
 **Frontend:**
 
@@ -186,11 +190,11 @@ server/             # backend (Node.js API)
 - **Projects UI is wired to the real backend**, not mock data: `StartPage.tsx` and `ProjectPage.tsx` keep `main`'s icon-tile grid UI, now calling `src/api/projects.ts` for real create/fetch (async `onCreateProject`/`onStartNewDrawing`, loading/error state) instead of local mock state. `HomePage.tsx` (exports `App`) carries the real data-fetching logic (`loadProjects`, `loadProjectDetail`, etc.) from `backendData`. A new `ApiTestPage.tsx` debug view is also merged in, reachable via a 4th `"api-test"` state in `HomePage`'s hand-rolled view switch — still always visible in nav, not dev-gated (deferred cleanup).
 - **Test infra is intact.** Vitest, `@testing-library/*`, `vitest.config.ts`, and the `useUndoHistory`/`useDefectPlacement` test files all merged in cleanly from `main`; `npm test` still works.
 
-**Still missing** (unchanged from before, confirmed still true): photo capture/preview, reminders, pre-inspection checklist, export, offline-first sync (IndexedDB/queue), and most of the [Navigation & Auth Flow](#8-navigation--auth-flow-planned) — no real URL routing, no Marketing/Pay/Preference pages, no autosave. Projects/drawings now do hit a real (if not-yet-runnable) backend, which is the one piece of that flow that's moved. No local Postgres/migration yet — see Backend Scaffold.
+**Still missing** (unchanged from before, confirmed still true): photo capture/preview, reminders, pre-inspection checklist, export, offline-first sync (IndexedDB/queue), and most of the [Navigation & Auth Flow](#8-navigation--auth-flow-planned) — no real URL routing, no Marketing/Pay/Preference pages, no autosave. Projects/drawings now hit a real, runnable, migrated backend (Neon Postgres) — see Backend Scaffold.
 
 - **Google sign-in (frontend half) fixed 2026-07-12, still accurate.** `src/components/auth/ui/SignInCard.tsx` renders Google's real sign-in button (via `google.accounts.id.renderButton`) when `VITE_GOOGLE_CLIENT_ID` is set, and falls back to a "Continue as demo user" button when it isn't. Ambient types for `window.google` live at `src/types/google-identity.d.ts`.
   - **Still client-side only.** The callback decodes the Google-issued JWT directly in the browser (`atob(...)`) and trusts it as-is — no backend verifies the token's signature yet. Fine for previewing the UI, but **not real authentication**: anyone could forge a similarly-shaped payload. Needs the server-side verification step (see Tech Stack/Data Model) — the backend now exists to build this on, but it isn't done yet.
-  - `.env.example` documents `VITE_GOOGLE_CLIENT_ID`, `VITE_API_BASE_URL` (currently unused — `src/api/projects.ts` calls relative `/api/...` paths via the Vite proxy instead), and `DATABASE_URL`. Copy it to `.env.local` and fill in real values. `.gitignore` excludes `.env`.
+  - `.env.example` documents `VITE_GOOGLE_CLIENT_ID`, `VITE_API_BASE_URL` (currently unused — `src/api/projects.ts` calls relative `/api/...` paths via the Vite proxy instead), and `DATABASE_URL`. **Split across two files, confirmed 2026-07-14 while getting the backend running:** `VITE_*` vars go in `.env.local` (Vite's convention); `DATABASE_URL` goes in a plain `.env` instead — `prisma.config.ts`'s `dotenv/config` only reads `.env` by default, and `dev:server` now loads env vars via Node's native `--env-file=.env` flag (`package.json`). `.gitignore` excludes both.
 - **No routing exists yet.** `HomePage.tsx` still does manual `useState`-based view switching (`"start" | "project" | "drawing" | "api-test"`) instead of URL-based routes.
 
 ## Notes for Claude Code
