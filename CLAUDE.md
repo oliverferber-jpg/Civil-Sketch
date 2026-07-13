@@ -7,23 +7,23 @@ An app for bridge inspectors to use in the field, replacing paper-based defect m
 ## Tech Stack
 
 - **Frontend:** React + TypeScript, built with Vite, styled with Tailwind CSS
-- **Backend:** Node.js API server (REST) — sits between the frontend and the database, since PostgreSQL (unlike Firestore) can't be reached directly from client code. **Two tiers as of 2026-07-13:** a minimal, unwired Express scaffold (`server/index.ts`, "Hello World" only) exists on `main`. Real progress — Prisma, a `pg` connection, routes, a service layer — lives on the unmerged `origin/backendData` branch and has not been reconciled with `main`. See [Branch / Team Status](#branch--team-status-as-of-2026-07-13).
-- **Database:** PostgreSQL. Not yet provisioned or connected — no schema/migrations exist yet.
+- **Backend:** Node.js API server (REST) — sits between the frontend and the database, since PostgreSQL (unlike Firestore) can't be reached directly from client code. **Two tiers as of 2026-07-14:** a minimal, unwired Express scaffold (`server/index.ts`, health-check only) exists on `main`. Real progress — Prisma, routes, a service layer — lives on the unmerged `origin/backendData` branch and has not been reconciled with `main`. See [Branch / Team Status](#branch--team-status-as-of-2026-07-14).
+- **Database:** PostgreSQL. Not yet provisioned or connected on `main` — no schema/migrations exist here yet (a Prisma schema does exist on `backendData`, see Branch Status).
 - **File storage:** Local disk for now (early development). PostgreSQL isn't well suited to storing binary files directly. Must be swapped for persistent cloud object storage (e.g. Cloudflare R2 or AWS S3) before deploying anywhere with ephemeral disks — most hosting platforms (Render, Fly, Railway, Heroku, etc.) don't persist local disk across redeploys. Keep local-disk file access isolated behind a small storage interface so this swap is cheap later.
 - **Version Control:** GitHub
 
-An ORM is needed for the backend to talk to PostgreSQL, for type-safe queries and migrations. **Decided: Prisma** (confirmed 2026-07-12). Still ask before actually adding the dependency, per the guardrails below — this records the choice, it doesn't authorize installing it yet.
+An ORM is needed for the backend to talk to PostgreSQL, for type-safe queries and migrations. **Decided: Prisma** (confirmed 2026-07-12) — not installed on `main` yet. It's already an actual dependency on `backendData` (`@prisma/client`, `@prisma/adapter-pg`, `prisma`, all `^7.8.0`), just not merged here. Ask before installing it on `main`, per the guardrails below.
 
-A routing library is needed once the [Navigation & Auth Flow](#8-navigation--auth-flow-planned) below is built, since the app currently has no URL-based routing at all. **Planned: `react-router-dom`**, not yet installed — same as Prisma, this records the choice without authorizing the install; ask first per the guardrails below.
+A routing library is needed once the [Navigation & Auth Flow](#8-navigation--auth-flow-planned) below is built, since the app currently has no URL-based routing at all. **Planned: `react-router-dom`**, not yet installed on either branch — same as Prisma, this records the choice without authorizing the install; ask first per the guardrails below.
 
-## Branch / Team Status (as of 2026-07-13)
+## Branch / Team Status (as of 2026-07-14)
 
 The team is working in parallel across a couple of branches; this section exists so nobody has to re-derive who's doing what from `git log`. Update it as branches merge or new ones start.
 
-- **`main`** — current default branch, frontend-heavy. Has the drawing canvas, defect panel (two-tap placement + undo), and a Projects/drawing-tile grid UI, all still running on **mock in-memory data** — no live backend calls. Also has the unwired `server/index.ts` scaffold (see Tech Stack).
-- **`origin/backendData`** (Oliver Ferber) — real backend work: `server/db.ts` (pg `Pool`), `server/prisma.ts` (Prisma Client), `server/routes/projects.ts`, `server/services/projectService.ts`, mock JSON fixtures. Diverged from `main` right after the defect-panel merge (commit `7726659`) and is now **18+ commits behind** `main`'s frontend work (undo, two-tap placement, project-grid redesign, test infra aren't on this branch). Needs a deliberate merge/rebase, not a fast-forward.
+- **`main`** — current default branch, frontend-heavy. Has the drawing canvas, defect panel (two-tap placement + undo), a Projects/drawing-tile grid UI, and a Vitest test suite, all still running on **mock in-memory data** — no live backend calls. Also has the unwired `server/index.ts` scaffold (see Tech Stack).
+- **`origin/backendData`** (Oliver Ferber, 5 commits) — real backend work: Express 5 + Prisma 7 (`server/prisma.ts`, `@prisma/adapter-pg`), `server/routes/projects.ts`, `server/services/projectService.ts`, a two-model Prisma schema (`Project`/`Drawing`), and a frontend wired to call it for real (`src/api/projects.ts`, loading/error states in `StartPage`/`ProjectPage`/`HomePage`). It diverged from `main` before `main`'s more recent frontend work, so it's **missing** undo, two-tap defect placement refinements, the project-grid redesign, and the whole Vitest test setup. It also **removed** things `main` still has: `useUndoHistory.ts` (+ test), `ConfirmDialog`/`Button`/`Card`, and the entire `vitest`/`@testing-library` setup — none of the branch's commit messages explain these removals (two of the five are literally "I have no idea what this does but what the hell" and "Smore more commits that really confused me"), so treat them as likely-accidental regressions to review, not intentional decisions, before merging. It's also **not runnable as committed**: no `prisma/migrations/` directory, `@prisma/client` isn't generated locally, no Docker Compose for local Postgres exists anywhere, and the Express server itself never loads `.env` (only the Prisma CLI does, via `prisma.config.ts`) — so `DATABASE_URL`/`PORT` need to be real OS env vars to reach `server/index.ts` today. There's also leftover dead code (`server/db.ts`, a raw `pg.Pool` helper, unused now that everything goes through Prisma), orphaned fixture files (`server/data/projects.json`, `server/data/projectDetails.json`, read by nothing), and a `server/server.env` with placeholder DB credentials committed directly to git instead of following the `.env`/`.gitignore` pattern. Needs a deliberate merge/rebase, not a fast-forward, and someone should decide whether to restore the deleted undo/confirm/test code or confirm dropping it was intentional.
 - **`origin/Server`** (previously attributed to Ariella here) **no longer exists** — that thread is resolved. Her `server/` scaffold was merged straight into `main` instead (as the minimal Express placeholder mentioned above).
-- **Open decision blocking a clean backend merge:** `origin/backendData`'s schema (and the current frontend's own types in `src/types/project.ts`) model the domain as **Project → Drawings** (`createProject({name, folder, description})`, `createDrawing`). This doesn't match the `inspections`/`faces` shape documented below in [Data Model](#data-model-starting-point--refine-as-needed). Someone needs to decide which naming/shape the team is actually building toward before backend work resumes — see the callout in that section.
+- **Open decision blocking a clean backend merge:** `origin/backendData`'s schema (`Project { id, name, description?, folder?, drawingCount?, lastUpdated?, drawings[] }` / `Drawing { id, projectId, title, angle?, status?, updatedAt?, notes?, createdAt?, project }`) and the current frontend's own types in `src/types/project.ts` model the domain as **Project → Drawings** (`createProject({name, folder, description})`, `createDrawing`). This doesn't match the `inspections`/`faces` shape documented below in [Data Model](#data-model-starting-point--refine-as-needed). Someone needs to decide which naming/shape the team is actually building toward before backend work resumes — see the callout in that section.
 
 ## Core Features
 
@@ -92,7 +92,7 @@ Not yet decided/built, flagged here rather than assumed:
 
 ## Data Model (starting point — refine as needed)
 
-**⚠ Naming mismatch, unresolved as of 2026-07-13:** this sketch uses `inspections`/`faces`. Both the current frontend (`src/types/project.ts`: `ProjectSummary`/`ProjectDetail`/`DrawingSummary`) and the in-progress `origin/backendData` branch (`createProject`/`createDrawing`) instead use a **Project → Drawings** shape. Don't silently pick one when implementing — flag it and confirm with the team which naming/shape is intended (see [Branch / Team Status](#branch--team-status-as-of-2026-07-13)).
+**⚠ Naming mismatch, unresolved as of 2026-07-14:** this sketch uses `inspections`/`faces`. Both the current frontend (`src/types/project.ts`: `ProjectSummary`/`ProjectDetail`/`DrawingSummary`) and the `origin/backendData` branch's Prisma schema (`Project`/`Drawing` models — see [Branch / Team Status](#branch--team-status-as-of-2026-07-14) for exact fields) instead use a **Project → Drawings** shape. Don't silently pick one when implementing — flag it and confirm with the team which naming/shape is intended.
 
 Relational tables (PostgreSQL), replacing the earlier Firestore-collection sketch:
 
@@ -107,23 +107,18 @@ Relational tables (PostgreSQL), replacing the earlier Firestore-collection sketc
 - `subscriptions` — **proposed, not confirmed.** Needed for the planned [Navigation & Auth Flow](#8-navigation--auth-flow-planned) subscription check: likely id, user_id (FK), status, plan, created_at. Not built, no schema/migration exists.
 - `user_preferences` — **proposed, not confirmed.** Needed for the planned Preference Page in the same flow: likely id, user_id (FK), plus whatever preference fields that page collects (undefined so far). Not built, no schema/migration exists.
 
-## Backend Scaffold (planned)
+## Backend Scaffold
 
-**Designed 2026-07-12, not started.** Captures the concrete shape of the first backend slice so it doesn't need to be re-derived later — see Current Status for why it's paused.
+**Not built on `main`. Real, partial progress exists on the unmerged `origin/backendData` branch — see [Branch / Team Status](#branch--team-status-as-of-2026-07-14) for what's actually there.** This replaces the earlier "planned, not started" version of this section now that real (if unmerged and not-yet-runnable) code exists somewhere in the repo.
 
-Minimal first slice, scoped to unblock the Projects/File flow in [Navigation & Auth Flow](#8-navigation--auth-flow-planned):
+What `backendData` actually has, for when this gets merged or rebuilt on `main`:
 
-- **Framework:** Express (TypeScript), matching the "TypeScript throughout" convention.
-- **Local Postgres:** Docker Compose (`postgres:16-alpine`, dev-only credentials) — no hosted dev DB.
-- **ORM:** Prisma, schema at `server/db/schema.prisma`. One initial migration covering the 8 already-confirmed Data Model tables (`inspections`, `faces`, `defects`, `photos`, `defect_types`, `checklist_templates`, `checklist_items`, `users`) — excluding the proposed/unconfirmed `subscriptions`/`user_preferences`. `inspections.inspector` becomes `inspectorId` (FK to `users.id`). UUID primary keys (forward-looking for offline sync, so client-generated IDs don't collide).
-- **Initial routes only:** `GET /api/health`, `GET /api/inspections`, `POST /api/inspections` — not the full `faces`/`defects`/`photos`/`checklists` set from the Suggested Folder Structure; those arrive with their own features later.
-- **Dev wiring:** Vite proxy for `/api` (avoids adding a `cors` dependency), new npm scripts (`dev:server`, `dev:all`, `prisma:migrate`, `prisma:generate`, `prisma:studio`).
-- **New dependencies this would require** (not installed — recorded for when this is actually built, same pattern as the Prisma/react-router-dom notes above): `express`, `@prisma/client`, `prisma`, `tsx`, `@types/express`, `concurrently`; drop the currently unused `nodemon`/`ts-node` devDependencies in favor of `tsx`.
-- **Explicitly out of scope even once built:** real Google ID-token verification, offline sync, the `subscriptions`/`user_preferences` tables, the file/photo storage interface.
-
-**Status update 2026-07-13:** the original blocker (`origin/Server`) is gone — Ariella's minimal scaffold was merged into `main` directly instead. The plan below is superseded in practice by `origin/backendData` (Oliver Ferber), which has gone further than this doc anticipated (Prisma + `pg` + routes + a service layer) but diverged before `main`'s recent frontend work and uses a Project/Drawings shape rather than Inspection/Faces — see [Branch / Team Status](#branch--team-status-as-of-2026-07-13) for what's actually there and what needs reconciling before this scaffold plan is still worth following as written.
-
-**Housekeeping flag:** `server/server.env` is currently committed to git (placeholder DB credentials only, not live secrets) instead of following the gitignored `.env`/`.env.example` pattern the frontend already uses. Worth cleaning up before real credentials ever land in that file — flagging here rather than fixing directly, since touching backend config falls under the Guardrails below.
+- **Framework:** Express 5, TypeScript, run via `tsx` in dev.
+- **Routes** (`server/routes/projects.ts`): `GET /api/projects`, `POST /api/projects`, `GET /api/projects/:projectId`, `POST /api/projects/:projectId/drawings` — all delegating to a Prisma-backed service layer (`server/services/projectService.ts`).
+- **ORM wiring:** `server/prisma.ts` (`PrismaClient` + `@prisma/adapter-pg`), schema at `prisma/schema.prisma` (two models, `Project`/`Drawing` — see Branch Status for exact fields).
+- **Dev wiring:** Vite proxy for `/api` → `localhost:3000` (avoids a `cors` dependency), `dev:server` npm script (`tsx server/index.ts`).
+- **What's still missing even on that branch:** no migrations (`prisma/migrations/` doesn't exist), Prisma Client isn't generated locally, no Docker Compose for local Postgres, and the server doesn't load `.env` at runtime (only the Prisma CLI does). None of this reaches `main` until the branch is reconciled and those gaps are closed.
+- **Explicitly out of scope even once merged:** real Google ID-token verification, offline sync, the `subscriptions`/`user_preferences` tables, the file/photo storage interface, and reconciling the `Project`/`Drawing` vs. `inspections`/`faces` naming mismatch (see Data Model) — none of that exists on either branch yet.
 
 ## Conventions
 
@@ -151,16 +146,16 @@ server/             # backend (Node.js API)
   db/               # PostgreSQL connection, schema/migrations, ORM models
 ```
 
-## Current Status (as of 2026-07-13)
+## Current Status (as of 2026-07-14)
 
 **What's built on `main`:**
 
 - **Drawing canvas:** `DrawingPadPage`/`DrawingPadCanvas.tsx` (Konva-based), pen/eraser, all three drawing colors implemented. Drawing state (Konva lines) still lives only in component `useState` — nothing persists across refresh yet, and there's no diagram-image upload/background, just a blank canvas.
 - **Defect panel:** `src/features/defects/` (`DefectPanel.tsx`, `DefectMarkerLayer.tsx`, `useDefectPlacement.ts`, `useDefectTypes.ts`, `defectTypeSeed.ts`) — 4 preloaded defect types (Crack, Chipping, Spalling, Corrosion), editable master list (add/rename/remove, guarded against removing a type that's in use). Placement is **two-tap**: first tap arms a marker at that position, second tap sets the label position and draws the leader line; re-tapping the armed type or pressing Escape cancels it.
-- **Undo:** `src/features/canvas/useUndoHistory.ts` tracks a shared stroke/defect stack; wired into `DrawingPadPage` via an Undo button (`undoLastLine`, `removeLastDefect`). Undo only, no redo. `ConfirmDialog` guards the separate "clear canvas" action.
-- **Projects UI:** `StartPage.tsx` (flat folder-icon grid, "+" tile creates a mock project) and `ProjectPage.tsx` (grid of drawing tiles within a project) — both still running on hardcoded/mock in-memory data in `HomePage.tsx`, no routing, no backend calls yet.
-- **Test infra:** Vitest + Testing Library added (`npm test`); `useUndoHistory` and `useDefectPlacement` have unit tests.
-- **`server/` scaffold exists** but is minimal and unwired — see [Tech Stack](#tech-stack) and [Branch / Team Status](#branch--team-status-as-of-2026-07-13) for the fuller (unmerged) backend picture.
+- **Undo:** `src/features/canvas/useUndoHistory.ts` tracks a shared stroke/defect stack; wired into `DrawingPadPage` via an Undo button (`undoLastLine`, `removeLastDefect`). Undo only, no redo. `ConfirmDialog` guards the separate "clear canvas" action. (`origin/backendData` has since deleted both of these with no replacement — see Branch Status.)
+- **Projects UI:** `StartPage.tsx` (flat folder-icon grid, "+" tile creates a mock project) and `ProjectPage.tsx` (grid of drawing tiles within a project) — both still running on hardcoded/mock in-memory data in `HomePage.tsx`, no routing, no backend calls yet. (`origin/backendData` has since wired these to a real, if not-yet-runnable, backend — see Branch Status.)
+- **Test infra:** Vitest + Testing Library added (`npm test`); `useUndoHistory` and `useDefectPlacement` have unit tests. (`origin/backendData` has since deleted this entire setup — see Branch Status.)
+- **`server/` scaffold exists** but is minimal and unwired — see [Tech Stack](#tech-stack) and [Branch / Team Status](#branch--team-status-as-of-2026-07-14) for the fuller (unmerged) backend picture.
 
 **Still missing** (unchanged from before, confirmed still true): photo capture/preview, reminders, pre-inspection checklist, export, offline-first sync (IndexedDB/queue), and all of the [Navigation & Auth Flow](#8-navigation--auth-flow-planned) — no real URL routing, no Marketing/Pay/Preference pages, no Projects/inspections list backed by the DB, no autosave.
 
