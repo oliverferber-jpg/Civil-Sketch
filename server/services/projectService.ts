@@ -1,5 +1,4 @@
-import fs from "node:fs/promises";
-import path from "node:path";
+import { query } from "../db";
 
 type ProjectSummary = {
   id: string;
@@ -27,24 +26,40 @@ type ProjectDetail = {
   drawings: DrawingSummary[];
 };
 
-const dataDir = path.join(process.cwd(), "server", "data");
-
-async function readJsonFile<T>(fileName: string): Promise<T> {
-  const filePath = path.join(dataDir, fileName);
-  const contents = await fs.readFile(filePath, "utf8");
-  return JSON.parse(contents) as T;
-}
-
 export async function getProjectSummaries(): Promise<ProjectSummary[]> {
-  return readJsonFile<ProjectSummary[]>("projects.json");
+  const rows = await query<ProjectSummary>(`
+    SELECT id, name, folder, description, drawing_count AS "drawingCount", last_updated AS "lastUpdated"
+    FROM projects
+    ORDER BY name
+  `);
+
+  return rows;
 }
 
 export async function getProjectById(projectId: string): Promise<ProjectDetail | null> {
-  const projectDetails = await readJsonFile<Record<string, ProjectDetail>>(
-    "projectDetails.json"
-  );
+  const rows = await query<ProjectDetail>(`
+    SELECT id, name, folder, description
+    FROM projects
+    WHERE id = $1
+  `, [projectId]);
 
-  return projectDetails[projectId] ?? null;
+  const project = rows[0];
+
+  if (!project) {
+    return null;
+  }
+
+  const drawings = await query<DrawingSummary>(`
+    SELECT id, title, angle, status, updated_at AS "updatedAt", notes
+    FROM drawings
+    WHERE project_id = $1
+    ORDER BY created_at
+  `, [projectId]);
+
+  return {
+    ...project,
+    drawings,
+  };
 }
 
 export type { ProjectDetail, ProjectSummary, DrawingSummary };
