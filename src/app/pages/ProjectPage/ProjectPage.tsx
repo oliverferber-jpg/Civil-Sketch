@@ -1,5 +1,5 @@
 import { Image, Plus } from "lucide-react";
-import type { DrawingSummary, ProjectDetail } from "../../../types/project";
+import type { DrawingSummary, ProjectDetail } from "../../../types/projects";
 
 type ProjectPageProps = {
   project: ProjectDetail;
