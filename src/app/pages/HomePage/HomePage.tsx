@@ -32,7 +32,8 @@ export default function App() {
     try {
       const data = await fetchProjects();
       setProjects(data);
-    } catch {
+    } catch (error) {
+      console.error("Failed to load projects", error);
       setProjectsError("Could not load projects from the backend.");
     } finally {
       setProjectsLoading(false);
@@ -49,7 +50,8 @@ export default function App() {
     try {
       const data = await fetchProjectById(projectId);
       setSelectedProject(data);
-    } catch {
+    } catch (error) {
+      console.error("Failed to load project detail", error);
       setProjectError("Could not load this project from the backend.");
     } finally {
       setProjectLoading(false);
@@ -84,7 +86,8 @@ export default function App() {
 
       await loadProjectDetail(selectedProjectId);
       setView("drawing");
-    } catch {
+    } catch (error) {
+      console.error("Failed to create drawing", error);
       setProjectError("Could not create a new drawing.");
     } finally {
       setCreatingDrawing(false);
