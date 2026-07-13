@@ -5,7 +5,8 @@ type ProjectPageProps = {
   project: ProjectDetail;
   onBack: () => void;
   onSelectDrawing: (drawingId: string) => void;
-  onStartNewDrawing: () => void;
+  onStartNewDrawing: () => Promise<void>;
+  creatingDrawing: boolean;
 };
 
 export default function ProjectPage({
@@ -13,6 +14,7 @@ export default function ProjectPage({
   onBack,
   onSelectDrawing,
   onStartNewDrawing,
+  creatingDrawing,
 }: ProjectPageProps) {
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
@@ -36,7 +38,7 @@ export default function ProjectPage({
         {project.drawings.map((drawing) => (
           <DrawingTile key={drawing.id} drawing={drawing} onSelect={onSelectDrawing} />
         ))}
-        <NewDrawingTile onCreate={onStartNewDrawing} />
+        <NewDrawingTile onCreate={onStartNewDrawing} creatingDrawing={creatingDrawing} />
       </div>
     </div>
   );
@@ -64,19 +66,26 @@ function DrawingTile({
   );
 }
 
-function NewDrawingTile({ onCreate }: { onCreate: () => void }) {
+function NewDrawingTile({
+  onCreate,
+  creatingDrawing,
+}: {
+  onCreate: () => void;
+  creatingDrawing: boolean;
+}) {
   return (
     <button
       type="button"
       onClick={onCreate}
+      disabled={creatingDrawing}
       aria-label="Start new drawing"
-      className="group flex flex-col gap-2 rounded-2xl border-2 border-dashed border-slate-300 p-3 text-left transition hover:border-blue-400 hover:bg-blue-50"
+      className="group flex flex-col gap-2 rounded-2xl border-2 border-dashed border-slate-300 p-3 text-left transition hover:border-blue-400 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
     >
       <div className="flex aspect-[4/3] items-center justify-center rounded-xl text-slate-400 transition group-hover:text-blue-600">
         <Plus size={40} strokeWidth={1.5} />
       </div>
       <span className="text-sm font-medium text-slate-500 group-hover:text-blue-600">
-        New drawing
+        {creatingDrawing ? "Creating..." : "New drawing"}
       </span>
     </button>
   );

@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createDrawing, createProject, fetchProjectById, fetchProjects } from "../../../api/projects";
+import type { ProjectDetail, ProjectSummary } from "../../../types/projects";
+import ApiTestPage from "../ApiTestPage/ApiTestPage";
 import DrawingPadPage from "../DrawingPadPage/DrawingPadPage";
 import ProjectPage from "../ProjectPage/ProjectPage";
 import SignInPage from "../SignInPage/SignInPage";
 import StartPage from "../StartPage/StartPage";
-import type { ProjectDetail, ProjectSummary } from "../../../types/project";
 
 type UserProfile = {
   name: string;
@@ -11,147 +13,203 @@ type UserProfile = {
   picture?: string;
 };
 
-const initialProjects: ProjectSummary[] = [
-  {
-    id: "project-1",
-    name: "Riverfront Residence",
-    folder: "Residential",
-    description: "Concept sketches for a modern riverside home.",
-    drawingCount: 4,
-    lastUpdated: "2 days ago",
-  },
-  {
-    id: "project-2",
-    name: "Harbor Studio",
-    folder: "Commercial",
-    description: "Facade studies and interior planning for a creative studio.",
-    drawingCount: 3,
-    lastUpdated: "1 week ago",
-  },
-  {
-    id: "project-3",
-    name: "Cedar Cabin",
-    folder: "Residential",
-    description: "Site and elevation sketches for a small cabin retreat.",
-    drawingCount: 2,
-    lastUpdated: "3 weeks ago",
-  },
-];
-
-const initialProjectDetails: Record<string, ProjectDetail> = {
-  "project-1": {
-    id: "project-1",
-    name: "Riverfront Residence",
-    folder: "Residential",
-    description: "Concept sketches for a modern riverside home.",
-    drawings: [
-      {
-        id: "drawing-1",
-        title: "North Elevation",
-        angle: "Front view",
-        status: "In progress",
-        updatedAt: "2h ago",
-        notes: "Refine the roofline and window rhythm.",
-      },
-      {
-        id: "drawing-2",
-        title: "Kitchen Layout",
-        angle: "Interior perspective",
-        status: "Draft",
-        updatedAt: "Yesterday",
-        notes: "Add cabinetry and island dimensions.",
-      },
-    ],
-  },
-  "project-2": {
-    id: "project-2",
-    name: "Harbor Studio",
-    folder: "Commercial",
-    description: "Facade studies and interior planning for a creative studio.",
-    drawings: [
-      {
-        id: "drawing-3",
-        title: "Facade Study",
-        angle: "Street view",
-        status: "Reviewed",
-        updatedAt: "4 days ago",
-        notes: "Final review for the glazing pattern.",
-      },
-    ],
-  },
-  "project-3": {
-    id: "project-3",
-    name: "Cedar Cabin",
-    folder: "Residential",
-    description: "Site and elevation sketches for a small cabin retreat.",
-    drawings: [
-      {
-        id: "drawing-4",
-        title: "Site Plan",
-        angle: "Top view",
-        status: "Draft",
-        updatedAt: "1 week ago",
-        notes: "Place the patio and access path.",
-      },
-    ],
-  },
-};
-
 export default function App() {
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [view, setView] = useState<"start" | "project" | "drawing">("start");
+  const [view, setView] = useState<"start" | "project" | "drawing" | "api-test">("start");
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  const [projects, setProjects] = useState<ProjectSummary[]>(initialProjects);
-  const [projectDetails, setProjectDetails] =
-    useState<Record<string, ProjectDetail>>(initialProjectDetails);
+  const [selectedProject, setSelectedProject] = useState<ProjectDetail | null>(null);
+  const [projects, setProjects] = useState<ProjectSummary[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(false);
+  const [projectsError, setProjectsError] = useState<string | null>(null);
+  const [projectLoading, setProjectLoading] = useState(false);
+  const [projectError, setProjectError] = useState<string | null>(null);
+  const [creatingDrawing, setCreatingDrawing] = useState(false);
 
-  const selectedProject = selectedProjectId ? projectDetails[selectedProjectId] ?? null : null;
+  const loadProjects = async () => {
+    setProjectsLoading(true);
+    setProjectsError(null);
 
-  const handleCreateProject = () => {
-    const id = crypto.randomUUID();
-    const newProject: ProjectSummary = {
-      id,
-      name: "New Project",
-      folder: "Uncategorized",
-      description: "No description yet.",
-      drawingCount: 0,
-      lastUpdated: "Just now",
-    };
-    const newDetail: ProjectDetail = { ...newProject, drawings: [] };
-
-    setProjects((prev) => [...prev, newProject]);
-    setProjectDetails((prev) => ({ ...prev, [id]: newDetail }));
-    setSelectedProjectId(id);
-    setView("project");
+    try {
+      const data = await fetchProjects();
+      setProjects(data);
+    } catch {
+      setProjectsError("Could not load projects from the backend.");
+    } finally {
+      setProjectsLoading(false);
+    }
   };
+
+  const loadProjectDetail = async (projectId: string) => {
+    setSelectedProjectId(projectId);
+    setSelectedProject(null);
+    setProjectLoading(true);
+    setProjectError(null);
+    setView("project");
+
+    try {
+      const data = await fetchProjectById(projectId);
+      setSelectedProject(data);
+    } catch {
+      setProjectError("Could not load this project from the backend.");
+    } finally {
+      setProjectLoading(false);
+    }
+  };
+
+  const handleCreateProject = async (input: {
+    name: string;
+    folder: string;
+    description: string;
+  }) => {
+    await createProject(input);
+    await loadProjects();
+  };
+
+  const handleCreateDrawing = async () => {
+    if (!selectedProjectId || creatingDrawing) {
+      return;
+    }
+
+    setCreatingDrawing(true);
+    setProjectError(null);
+
+    try {
+      const title = `New drawing ${new Date().toLocaleTimeString()}`;
+      await createDrawing(selectedProjectId, {
+        title,
+        angle: "Front view",
+        status: "Draft",
+        notes: "",
+      });
+
+      await loadProjectDetail(selectedProjectId);
+      setView("drawing");
+    } catch {
+      setProjectError("Could not create a new drawing.");
+    } finally {
+      setCreatingDrawing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    loadProjects();
+  }, [user]);
 
   if (!user) {
     return <SignInPage onSuccess={setUser} />;
   }
 
   const renderContent = () => {
+    if (view === "api-test") {
+      return (
+        <div className="flex flex-col gap-4">
+          <button
+            type="button"
+            onClick={() => setView("start")}
+            className="w-fit rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+          >
+            Back to start
+          </button>
+          <ApiTestPage />
+        </div>
+      );
+    }
+
     if (view === "drawing") {
       return <DrawingPadPage title={selectedProject?.name} onBack={() => setView("project")} />;
     }
 
-    if (view === "project" && selectedProject) {
+    if (view === "project") {
+      if (projectLoading) {
+        return (
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
+            Loading project details...
+          </div>
+        );
+      }
+
+      if (projectError) {
+        return (
+          <div className="flex max-w-3xl flex-col gap-4 rounded-3xl border border-rose-200 bg-rose-50 p-6 shadow-sm">
+            <p className="text-sm font-medium text-rose-700">{projectError}</p>
+            <div className="flex gap-2">
+              {selectedProjectId ? (
+                <button
+                  type="button"
+                  onClick={() => loadProjectDetail(selectedProjectId)}
+                  className="w-fit rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700"
+                >
+                  Retry
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => setView("start")}
+                className="w-fit rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+              >
+                Back to projects
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      if (!selectedProject) {
+        return (
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
+            Select a project to continue.
+          </div>
+        );
+      }
+
       return (
         <ProjectPage
           project={selectedProject}
-          onBack={() => setView("start")}
-          onSelectDrawing={() => setView("drawing")}
-          onStartNewDrawing={() => setView("drawing")}
+          onBack={() => {
+            setView("start");
+            setProjectError(null);
+          }}
+          onSelectDrawing={(drawingId) => {
+            void drawingId;
+            setView("drawing");
+          }}
+          onStartNewDrawing={handleCreateDrawing}
+          creatingDrawing={creatingDrawing}
         />
+      );
+    }
+
+    if (projectsLoading) {
+      return (
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
+          Loading projects...
+        </div>
+      );
+    }
+
+    if (projectsError) {
+      return (
+        <div className="flex max-w-3xl flex-col gap-4 rounded-3xl border border-rose-200 bg-rose-50 p-6 shadow-sm">
+          <p className="text-sm font-medium text-rose-700">{projectsError}</p>
+          <button
+            type="button"
+            onClick={loadProjects}
+            className="w-fit rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700"
+          >
+            Retry
+          </button>
+        </div>
       );
     }
 
     return (
       <StartPage
         projects={projects}
-        onSelectProject={(projectId) => {
-          setSelectedProjectId(projectId);
-          setView("project");
-        }}
+        onSelectProject={loadProjectDetail}
         onCreateProject={handleCreateProject}
       />
     );
@@ -164,16 +222,28 @@ export default function App() {
           <h2 className="m-0 text-xl font-semibold text-slate-900">CivilSketch</h2>
           <p className="mt-1 text-sm text-slate-500">Signed in as {user.name}</p>
         </div>
-        <button
-          onClick={() => {
-            setUser(null);
-            setView("start");
-            setSelectedProjectId(null);
-          }}
-          className="rounded-full border border-slate-300 bg-white px-4 py-2 font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100"
-        >
-          Sign out
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setView("api-test")}
+            className="rounded-full border border-slate-300 bg-white px-4 py-2 font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100"
+          >
+            API test
+          </button>
+          <button
+            onClick={() => {
+              setUser(null);
+              setView("start");
+              setSelectedProjectId(null);
+              setSelectedProject(null);
+              setProjects([]);
+              setProjectsError(null);
+              setProjectError(null);
+            }}
+            className="rounded-full border border-slate-300 bg-white px-4 py-2 font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100"
+          >
+            Sign out
+          </button>
+        </div>
       </div>
       <div className="p-6">{renderContent()}</div>
     </div>

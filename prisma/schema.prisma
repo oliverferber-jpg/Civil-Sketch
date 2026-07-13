@@ -1,0 +1,33 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Project {
+  id          String    @id
+  name        String
+  description String?
+  folder      String?
+  drawingCount Int?     @default(0) @map("drawing_count")
+  lastUpdated  String?  @map("last_updated")
+  drawings    Drawing[]
+
+  @@map("projects")
+}
+
+model Drawing {
+  id          String   @id
+  projectId   String   @map("project_id")
+  title       String
+  angle       String?
+  status      String?
+  updatedAt   String?  @map("updated_at")
+  notes       String?
+  createdAt   DateTime? @default(now()) @map("created_at")
+  project     Project  @relation(fields: [projectId], references: [id])
+
+  @@map("drawings")
+}
