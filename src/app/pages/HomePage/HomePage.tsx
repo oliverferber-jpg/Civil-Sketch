@@ -131,7 +131,7 @@ export default function App() {
 
   const renderContent = () => {
     if (view === "drawing") {
-      return <DrawingPadPage onBack={() => setView("project")} />;
+      return <DrawingPadPage title={selectedProject?.name} onBack={() => setView("project")} />;
     }
 
     if (view === "project" && selectedProject) {
