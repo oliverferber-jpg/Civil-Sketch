@@ -141,7 +141,7 @@ All of the following are now done — kept here as a record of what each step re
 - **Local Postgres:** provisioned as a hosted Neon free-tier project rather than Docker Compose/native install (see the Tech Stack decision above for why).
 - **Env loading:** `server/index.ts` still doesn't import `dotenv` directly, but `dev:server`'s script (`package.json`) now runs `tsx --env-file=.env server/index.ts`, using Node's native env-file support (v20.6+) instead. `DATABASE_URL` lives in a plain `.env` (not `.env.local`) because `prisma.config.ts`'s `dotenv/config` only reads `.env` by default — see the `.env.example` split above.
 
-**Still true / worth knowing:** each developer needs their own `DATABASE_URL` in a local `.env`; there's still no Docker Compose file or `dev:all` concurrent-runner script (see "Other things worth flagging" below) — running frontend + backend still means two terminals (`npm run dev` and `npm run dev:server`).
+**Still true / worth knowing:** each developer needs their own `DATABASE_URL` in a local `.env`; there's still no Docker Compose file for local Postgres (see the Neon decision above for why that's fine here). **Resolved 2026-07-14:** added `npm run dev:all` (via a new `concurrently` devDependency, approved by the user) to run frontend + backend together in one terminal with labeled/colored output — added directly in response to a real incident where the Vite dev server silently died between sessions while Express stayed up, producing a confusing "Could not load projects from the backend." error. `npm run dev`/`npm run dev:server` still work individually too.
 
 ### Other things worth flagging (deliberately not fixed in the merge — see Branch/Team Status; Guardrails say ask first)
 
@@ -150,7 +150,7 @@ All of the following are now done — kept here as a record of what each step re
 - **`server/server.env`** is committed directly to git with placeholder DB credentials (`PORT`, `DB_USER`, `DB_HOST`, `DB_NAME`, `DB_PASSWORD`, `DB_PORT`) instead of following the `.env`/`.env.example` + `.gitignore` pattern the frontend already uses. Worth cleaning up before real credentials ever land there.
 - **Two competing ways to start the server:** `npm run dev:server` (`tsx`, matches the intended setup) vs. `npm run server` (`node --loader ts-node/esm`, a deprecated/experimental flag). Both `ts-node` and `tsx` remain installed as devDependencies — the original plan said to drop `ts-node`/`nodemon` in favor of `tsx`, but neither was actually removed.
 - **`src/types/project.ts` (singular, `main`) and `src/types/projects.ts` (plural, `backendData`)** both still exist post-merge, defining the same shape — left unconsolidated deliberately to keep the merge diff small.
-- **No `dev:all` script / no `concurrently` dependency** — running frontend + backend together still means two terminals (`npm run dev` and `npm run dev:server`).
+- ~~**No `dev:all` script / no `concurrently` dependency**~~ — resolved 2026-07-14, see Backend Scaffold above.
 
 ## Conventions
 
