@@ -7,23 +7,25 @@ An app for bridge inspectors to use in the field, replacing paper-based defect m
 ## Tech Stack
 
 - **Frontend:** React + TypeScript, built with Vite, styled with Tailwind CSS
-- **Backend:** Node.js API server (REST) — sits between the frontend and the database, since PostgreSQL (unlike Firestore) can't be reached directly from client code. **Two tiers as of 2026-07-14:** a minimal, unwired Express scaffold (`server/index.ts`, health-check only) exists on `main`. Real progress — Prisma, routes, a service layer — lives on the unmerged `origin/backendData` branch and has not been reconciled with `main`. See [Branch / Team Status](#branch--team-status-as-of-2026-07-14).
-- **Database:** PostgreSQL. Not yet provisioned or connected on `main` — no schema/migrations exist here yet (a Prisma schema does exist on `backendData`, see Branch Status).
+- **Backend:** Node.js API server (REST) — sits between the frontend and the database, since PostgreSQL (unlike Firestore) can't be reached directly from client code. **As of 2026-07-14**, the real Express 5 + Prisma backend from `origin/backendData` (`server/index.ts` mounting a `projects` router, Prisma-backed service layer) has been merged onto `integration/merge-backend-data` alongside `main`'s frontend work. See [Backend Scaffold](#backend-scaffold) for what's implemented and what's still needed before it's runnable (local Postgres + first migration).
+- **Database:** PostgreSQL, via Prisma. Schema exists (`prisma/schema.prisma`, `Project`/`Drawing` models) but has never been migrated — no `prisma/migrations/` directory, no DB provisioned yet.
 - **File storage:** Local disk for now (early development). PostgreSQL isn't well suited to storing binary files directly. Must be swapped for persistent cloud object storage (e.g. Cloudflare R2 or AWS S3) before deploying anywhere with ephemeral disks — most hosting platforms (Render, Fly, Railway, Heroku, etc.) don't persist local disk across redeploys. Keep local-disk file access isolated behind a small storage interface so this swap is cheap later.
 - **Version Control:** GitHub
 
-An ORM is needed for the backend to talk to PostgreSQL, for type-safe queries and migrations. **Decided: Prisma** (confirmed 2026-07-12) — not installed on `main` yet. It's already an actual dependency on `backendData` (`@prisma/client`, `@prisma/adapter-pg`, `prisma`, all `^7.8.0`), just not merged here. Ask before installing it on `main`, per the guardrails below.
+An ORM is needed for the backend to talk to PostgreSQL, for type-safe queries and migrations. **Decided: Prisma** (confirmed 2026-07-12) — now an actual dependency (`@prisma/client`, `@prisma/adapter-pg`, `prisma`, all `^7.8.0`) wired into `server/prisma.ts`, merged in from `backendData`. Still ask before running the first real migration against a database, per the guardrails below.
 
-A routing library is needed once the [Navigation & Auth Flow](#8-navigation--auth-flow-planned) below is built, since the app currently has no URL-based routing at all. **Planned: `react-router-dom`**, not yet installed on either branch — same as Prisma, this records the choice without authorizing the install; ask first per the guardrails below.
+A routing library is needed once the [Navigation & Auth Flow](#8-navigation--auth-flow-planned) below is built, since the app currently has no URL-based routing at all. **Planned: `react-router-dom`**, not yet installed — same as Prisma, this records the choice without authorizing the install; ask first per the guardrails below.
 
 ## Branch / Team Status (as of 2026-07-14)
 
-The team is working in parallel across a couple of branches; this section exists so nobody has to re-derive who's doing what from `git log`. Update it as branches merge or new ones start.
+`origin/backendData` (Oliver Ferber, 5 commits) has been merged into `main`'s frontend work via `integration/merge-backend-data`, resolving the divergence described below. Kept for context on what each side contributed and how conflicts were resolved.
 
-- **`main`** — current default branch, frontend-heavy. Has the drawing canvas, defect panel (two-tap placement + undo), a Projects/drawing-tile grid UI, and a Vitest test suite, all still running on **mock in-memory data** — no live backend calls. Also has the unwired `server/index.ts` scaffold (see Tech Stack).
-- **`origin/backendData`** (Oliver Ferber, 5 commits) — real backend work: Express 5 + Prisma 7 (`server/prisma.ts`, `@prisma/adapter-pg`), `server/routes/projects.ts`, `server/services/projectService.ts`, a two-model Prisma schema (`Project`/`Drawing`), and a frontend wired to call it for real (`src/api/projects.ts`, loading/error states in `StartPage`/`ProjectPage`/`HomePage`). It diverged from `main` before `main`'s more recent frontend work, so it's **missing** undo, two-tap defect placement refinements, the project-grid redesign, and the whole Vitest test setup. It also **removed** things `main` still has: `useUndoHistory.ts` (+ test), `ConfirmDialog`/`Button`/`Card`, and the entire `vitest`/`@testing-library` setup — none of the branch's commit messages explain these removals (two of the five are literally "I have no idea what this does but what the hell" and "Smore more commits that really confused me"), so treat them as likely-accidental regressions to review, not intentional decisions, before merging. It's also **not runnable as committed**: no `prisma/migrations/` directory, `@prisma/client` isn't generated locally, no Docker Compose for local Postgres exists anywhere, and the Express server itself never loads `.env` (only the Prisma CLI does, via `prisma.config.ts`) — so `DATABASE_URL`/`PORT` need to be real OS env vars to reach `server/index.ts` today. There's also leftover dead code (`server/db.ts`, a raw `pg.Pool` helper, unused now that everything goes through Prisma), orphaned fixture files (`server/data/projects.json`, `server/data/projectDetails.json`, read by nothing), and a `server/server.env` with placeholder DB credentials committed directly to git instead of following the `.env`/`.gitignore` pattern. Needs a deliberate merge/rebase, not a fast-forward, and someone should decide whether to restore the deleted undo/confirm/test code or confirm dropping it was intentional.
+- **`main`** (pre-merge) had the drawing canvas, defect panel (two-tap placement + undo), a Projects/drawing-tile grid UI, and a Vitest test suite, all running on **mock in-memory data** — no live backend calls. Also had the unwired `server/index.ts` scaffold.
+- **`origin/backendData`** (pre-merge) had the real backend: Express 5 + Prisma 7 (`server/prisma.ts`, `@prisma/adapter-pg`), `server/routes/projects.ts`, `server/services/projectService.ts`, a two-model Prisma schema (`Project`/`Drawing`), and a frontend wired to call it for real. It forked from `main` at commit `7726659`, **before** `main`'s undo, two-tap defect placement, project-grid redesign, and Vitest work existed — so it never had `useUndoHistory.ts`, `ConfirmDialog`/`Button`/`Card`, or the Vitest setup. (An earlier version of this doc read that absence as `backendData` having "removed" or "deleted" those — confirmed via the shared fork point that's inaccurate: they simply didn't exist yet at the point of divergence, so merging brought them in with zero conflict.)
+- **Merge resolution:** kept `main`'s newer UI shells (`StartPage`/`ProjectPage` icon-tile grids) and threaded in `backendData`'s real async data flow/API calls; kept `backendData`'s `HomePage.tsx` (exports `App`) as the base since it already had the real fetch/create logic `main`'s mock version lacked.
+- **Deliberately deferred in the merge** (kept as-is to minimize the diff, flagged for a later cleanup pass): dead `server/db.ts` (unused raw `pg.Pool`), stale `server/server.env` (unused `DB_*` vars, committed to git), orphaned `server/data/*.json` fixtures, the `src/types/project.ts`/`src/types/projects.ts` duplication, `ApiTestPage.tsx` always visible in nav, and the redundant `server`/`dev:server` npm scripts (`ts-node` vs `tsx`) plus the unused `nodemon` devDependency.
 - **`origin/Server`** (previously attributed to Ariella here) **no longer exists** — that thread is resolved. Her `server/` scaffold was merged straight into `main` instead (as the minimal Express placeholder mentioned above).
-- **Open decision blocking a clean backend merge:** `origin/backendData`'s schema (`Project { id, name, description?, folder?, drawingCount?, lastUpdated?, drawings[] }` / `Drawing { id, projectId, title, angle?, status?, updatedAt?, notes?, createdAt?, project }`) and the current frontend's own types in `src/types/project.ts` model the domain as **Project → Drawings** (`createProject({name, folder, description})`, `createDrawing`). This doesn't match the `inspections`/`faces` shape documented below in [Data Model](#data-model-starting-point--refine-as-needed). Someone needs to decide which naming/shape the team is actually building toward before backend work resumes — see the callout in that section.
+- **The Project/Drawings vs. `inspections`/`faces` naming mismatch is not a merge blocker.** Both sides already independently used the same Project→Drawings shape (`Project { id, name, description?, folder?, drawingCount?, lastUpdated?, drawings[] }` / `Drawing { id, projectId, title, angle?, status?, updatedAt?, notes?, createdAt?, project }`), so there was no decision needed to complete this merge. Whether to eventually migrate toward the `inspections`/`faces` naming in [Data Model](#data-model-starting-point--refine-as-needed) remains a separate, open question for the team.
 
 ## Core Features
 
@@ -89,10 +91,11 @@ Not yet decided/built, flagged here rather than assumed:
 - Billing/subscription is out of scope to build right now — this only documents the intended shape so future work fits the target architecture.
 - The Pay/Preference flow implies eventual new tables (see Data Model) beyond today's sketch — proposed, not confirmed.
 - Real routing requires adding a routing library (see Tech Stack) — a new dependency, ask first per Guardrails.
+- The `Project`/`Drawing` shape actually implemented on this branch (see Branch Status and Backend Scaffold) doesn't yet cover Projects/File in `inspections`/`faces` terms — reconciling the two is part of the open naming decision.
 
 ## Data Model (starting point — refine as needed)
 
-**⚠ Naming mismatch, unresolved as of 2026-07-14:** this sketch uses `inspections`/`faces`. Both the current frontend (`src/types/project.ts`: `ProjectSummary`/`ProjectDetail`/`DrawingSummary`) and the `origin/backendData` branch's Prisma schema (`Project`/`Drawing` models — see [Branch / Team Status](#branch--team-status-as-of-2026-07-14) for exact fields) instead use a **Project → Drawings** shape. Don't silently pick one when implementing — flag it and confirm with the team which naming/shape is intended.
+**⚠ Naming mismatch, still open as a design question (not a merge blocker):** this sketch uses `inspections`/`faces`. What's actually implemented — both the frontend types (`src/types/project.ts`/`src/types/projects.ts`) and the Prisma schema — uses a **Project → Drawings** shape instead (see [Backend Scaffold](#backend-scaffold) for exact fields). Both branches already agreed on Project/Drawings independently, so this didn't block reconciling them; what's still open is whether the team wants to eventually rename toward `inspections`/`faces` to match this sketch, or update this sketch to match Project/Drawings. Don't silently pick one when building new features on top — flag it and confirm with the team first.
 
 Relational tables (PostgreSQL), replacing the earlier Firestore-collection sketch:
 
@@ -109,16 +112,41 @@ Relational tables (PostgreSQL), replacing the earlier Firestore-collection sketc
 
 ## Backend Scaffold
 
-**Not built on `main`. Real, partial progress exists on the unmerged `origin/backendData` branch — see [Branch / Team Status](#branch--team-status-as-of-2026-07-14) for what's actually there.** This replaces the earlier "planned, not started" version of this section now that real (if unmerged and not-yet-runnable) code exists somewhere in the repo.
+**Implemented, merged onto `integration/merge-backend-data` as of 2026-07-14, but not runnable out of the box — see "What's missing to actually run this" below.** This replaces the earlier "planned, not started" version of this section now that real code exists and has been merged.
 
-What `backendData` actually has, for when this gets merged or rebuilt on `main`:
+### What's implemented
 
-- **Framework:** Express 5, TypeScript, run via `tsx` in dev.
-- **Routes** (`server/routes/projects.ts`): `GET /api/projects`, `POST /api/projects`, `GET /api/projects/:projectId`, `POST /api/projects/:projectId/drawings` — all delegating to a Prisma-backed service layer (`server/services/projectService.ts`).
-- **ORM wiring:** `server/prisma.ts` (`PrismaClient` + `@prisma/adapter-pg`), schema at `prisma/schema.prisma` (two models, `Project`/`Drawing` — see Branch Status for exact fields).
-- **Dev wiring:** Vite proxy for `/api` → `localhost:3000` (avoids a `cors` dependency), `dev:server` npm script (`tsx server/index.ts`).
-- **What's still missing even on that branch:** no migrations (`prisma/migrations/` doesn't exist), Prisma Client isn't generated locally, no Docker Compose for local Postgres, and the server doesn't load `.env` at runtime (only the Prisma CLI does). None of this reaches `main` until the branch is reconciled and those gaps are closed.
-- **Explicitly out of scope even once merged:** real Google ID-token verification, offline sync, the `subscriptions`/`user_preferences` tables, the file/photo storage interface, and reconciling the `Project`/`Drawing` vs. `inspections`/`faces` naming mismatch (see Data Model) — none of that exists on either branch yet.
+- **Framework:** Express 5, TypeScript, run via `tsx` in dev (`npm run dev:server` → `tsx server/index.ts`).
+- **`server/index.ts`:** `express.json()` middleware, `GET /api/health`, mounts a `projects` router at `/api/projects`, listens on `process.env.PORT ?? 3000`.
+- **Routes** (`server/routes/projects.ts`), all delegating to the service layer below:
+  - `GET /api/projects` — list project summaries
+  - `POST /api/projects` — create a project (`{ name, folder, description }`, `name` required)
+  - `GET /api/projects/:projectId` — get one project + its drawings, 404 if missing
+  - `POST /api/projects/:projectId/drawings` — create a drawing under a project (`{ title, angle, status, notes }`, `title` required), 404 if project missing
+- **Service layer** (`server/services/projectService.ts`): `getProjectSummaries`, `getProjectById`, `createProject`, `createDrawing` — all real Prisma queries, IDs generated app-side via `crypto.randomUUID()`.
+- **Prisma client** (`server/prisma.ts`): `PrismaClient` + the `@prisma/adapter-pg` driver adapter, singleton-cached on `globalThis` outside production. Throws at import time if `DATABASE_URL` isn't set.
+- **Prisma schema** (`prisma/schema.prisma`) — two models, matching the Project/Drawing shape flagged in Data Model above:
+  - `Project { id, name, description?, folder?, drawingCount? (default 0), lastUpdated?, drawings[] }` → table `projects`
+  - `Drawing { id, projectId, title, angle?, status?, updatedAt?, notes?, createdAt? (default now), project }` → table `drawings`, FK to `Project`
+  - IDs are plain `String @id` (no DB default — always app-generated). `lastUpdated`/`updatedAt` are free-text display strings (e.g. `"just now"`), not real timestamps; `createdAt` is a real `DateTime` but isn't surfaced anywhere in the API responses yet.
+- **Frontend wiring:** `src/api/projects.ts` (plain `fetch`, no axios client) calls all four routes above. `HomePage`/`StartPage`/`ProjectPage` do real data fetching with loading/error states, keeping `main`'s newer UI shells. A new `ApiTestPage.tsx` debug view (reachable via a 4th `"api-test"` state in `HomePage`'s hand-rolled view switch) exists purely to manually exercise `GET /api/projects` and `GET /api/projects/:id` during development.
+- **Dev wiring:** Vite proxies `/api` → `http://localhost:3000` (`vite.config.ts`), so the frontend can call relative `/api/...` paths with no `cors` package needed, same as originally planned.
+
+### What's missing to actually run this
+
+- **No migrations exist.** `prisma/migrations/` doesn't exist — the schema has never been migrated against a real database. First run needs `prisma migrate dev` to generate an initial migration.
+- **Prisma Client isn't generated locally** — `node_modules/@prisma` isn't present in this checkout. Needs `npm install && npm run prisma:generate` before the server can start at all.
+- **No local Postgres setup exists.** No Docker Compose file anywhere in the repo, despite that being the original plan for local dev Postgres. A developer has to stand up Postgres by hand right now.
+- **The running server doesn't load `.env`.** Nothing in `server/` imports `dotenv`; only `prisma.config.ts` does (for the Prisma CLI). So `DATABASE_URL`/`PORT` in `.env`/`.env.local` reach `prisma generate`/`prisma migrate` but **not** `server/index.ts` — the server only sees real OS environment variables as committed today.
+
+### Other things worth flagging (deliberately not fixed in the merge — see Branch/Team Status; Guardrails say ask first)
+
+- **`server/db.ts`** is dead code — a raw `pg.Pool` query helper, unused anywhere; only `server/prisma.ts` is actually wired into routes/services. Looks like leftover from before the "Convert from raw SQL queries to Prisma" commit.
+- **`server/data/projects.json` and `server/data/projectDetails.json`** are orphaned fixtures — no code reads them, no seed script references them.
+- **`server/server.env`** is committed directly to git with placeholder DB credentials (`PORT`, `DB_USER`, `DB_HOST`, `DB_NAME`, `DB_PASSWORD`, `DB_PORT`) instead of following the `.env`/`.env.example` + `.gitignore` pattern the frontend already uses. Worth cleaning up before real credentials ever land there.
+- **Two competing ways to start the server:** `npm run dev:server` (`tsx`, matches the intended setup) vs. `npm run server` (`node --loader ts-node/esm`, a deprecated/experimental flag). Both `ts-node` and `tsx` remain installed as devDependencies — the original plan said to drop `ts-node`/`nodemon` in favor of `tsx`, but neither was actually removed.
+- **`src/types/project.ts` (singular, `main`) and `src/types/projects.ts` (plural, `backendData`)** both still exist post-merge, defining the same shape — left unconsolidated deliberately to keep the merge diff small.
+- **No `dev:all` script / no `concurrently` dependency** — running frontend + backend together still means two terminals (`npm run dev` and `npm run dev:server`).
 
 ## Conventions
 
@@ -146,23 +174,24 @@ server/             # backend (Node.js API)
   db/               # PostgreSQL connection, schema/migrations, ORM models
 ```
 
-## Current Status (as of 2026-07-14)
+## Current Status (as of 2026-07-14, `integration/merge-backend-data`)
 
-**What's built on `main`:**
+**Backend:** see [Backend Scaffold](#backend-scaffold) above for the full picture — real Express + Prisma routes/service layer exist for `Project`/`Drawing`, merged in from `backendData`, but the setup isn't runnable without manual DB provisioning, migrations, and a Prisma Client install first.
+
+**Frontend:**
 
 - **Drawing canvas:** `DrawingPadPage`/`DrawingPadCanvas.tsx` (Konva-based), pen/eraser, all three drawing colors implemented. Drawing state (Konva lines) still lives only in component `useState` — nothing persists across refresh yet, and there's no diagram-image upload/background, just a blank canvas.
 - **Defect panel:** `src/features/defects/` (`DefectPanel.tsx`, `DefectMarkerLayer.tsx`, `useDefectPlacement.ts`, `useDefectTypes.ts`, `defectTypeSeed.ts`) — 4 preloaded defect types (Crack, Chipping, Spalling, Corrosion), editable master list (add/rename/remove, guarded against removing a type that's in use). Placement is **two-tap**: first tap arms a marker at that position, second tap sets the label position and draws the leader line; re-tapping the armed type or pressing Escape cancels it.
-- **Undo:** `src/features/canvas/useUndoHistory.ts` tracks a shared stroke/defect stack; wired into `DrawingPadPage` via an Undo button (`undoLastLine`, `removeLastDefect`). Undo only, no redo. `ConfirmDialog` guards the separate "clear canvas" action. (`origin/backendData` has since deleted both of these with no replacement — see Branch Status.)
-- **Projects UI:** `StartPage.tsx` (flat folder-icon grid, "+" tile creates a mock project) and `ProjectPage.tsx` (grid of drawing tiles within a project) — both still running on hardcoded/mock in-memory data in `HomePage.tsx`, no routing, no backend calls yet. (`origin/backendData` has since wired these to a real, if not-yet-runnable, backend — see Branch Status.)
-- **Test infra:** Vitest + Testing Library added (`npm test`); `useUndoHistory` and `useDefectPlacement` have unit tests. (`origin/backendData` has since deleted this entire setup — see Branch Status.)
-- **`server/` scaffold exists** but is minimal and unwired — see [Tech Stack](#tech-stack) and [Branch / Team Status](#branch--team-status-as-of-2026-07-14) for the fuller (unmerged) backend picture.
+- **Undo and clear-confirmation are intact.** `useUndoHistory.ts` (+ test) and `ConfirmDialog`/`Button`/`Card` merged in cleanly from `main` with no conflict — `backendData` never touched these (it forked before they existed; see the corrected note in Branch/Team Status). Undo button, undo-only (no redo), `ConfirmDialog` still guards "clear canvas".
+- **Projects UI is wired to the real backend**, not mock data: `StartPage.tsx` and `ProjectPage.tsx` keep `main`'s icon-tile grid UI, now calling `src/api/projects.ts` for real create/fetch (async `onCreateProject`/`onStartNewDrawing`, loading/error state) instead of local mock state. `HomePage.tsx` (exports `App`) carries the real data-fetching logic (`loadProjects`, `loadProjectDetail`, etc.) from `backendData`. A new `ApiTestPage.tsx` debug view is also merged in, reachable via a 4th `"api-test"` state in `HomePage`'s hand-rolled view switch — still always visible in nav, not dev-gated (deferred cleanup).
+- **Test infra is intact.** Vitest, `@testing-library/*`, `vitest.config.ts`, and the `useUndoHistory`/`useDefectPlacement` test files all merged in cleanly from `main`; `npm test` still works.
 
-**Still missing** (unchanged from before, confirmed still true): photo capture/preview, reminders, pre-inspection checklist, export, offline-first sync (IndexedDB/queue), and all of the [Navigation & Auth Flow](#8-navigation--auth-flow-planned) — no real URL routing, no Marketing/Pay/Preference pages, no Projects/inspections list backed by the DB, no autosave.
+**Still missing** (unchanged from before, confirmed still true): photo capture/preview, reminders, pre-inspection checklist, export, offline-first sync (IndexedDB/queue), and most of the [Navigation & Auth Flow](#8-navigation--auth-flow-planned) — no real URL routing, no Marketing/Pay/Preference pages, no autosave. Projects/drawings now do hit a real (if not-yet-runnable) backend, which is the one piece of that flow that's moved. No local Postgres/migration yet — see Backend Scaffold.
 
 - **Google sign-in (frontend half) fixed 2026-07-12, still accurate.** `src/components/auth/ui/SignInCard.tsx` renders Google's real sign-in button (via `google.accounts.id.renderButton`) when `VITE_GOOGLE_CLIENT_ID` is set, and falls back to a "Continue as demo user" button when it isn't. Ambient types for `window.google` live at `src/types/google-identity.d.ts`.
-  - **Still client-side only.** The callback decodes the Google-issued JWT directly in the browser (`atob(...)`) and trusts it as-is — no backend verifies the token's signature yet. Fine for previewing the UI, but **not real authentication**: anyone could forge a similarly-shaped payload. Needs the server-side verification step (see Tech Stack/Data Model) once the backend situation is sorted out.
-  - `.env.example` documents `VITE_GOOGLE_CLIENT_ID`; copy it to `.env.local` and fill in a real Google OAuth Client ID to test the real button locally. `.gitignore` excludes `.env`.
-- **No routing exists yet.** `src/main.tsx` renders `HomePage` directly, which does manual `useState`-based view switching (`"start" | "project" | "drawing"`) instead of URL-based routes.
+  - **Still client-side only.** The callback decodes the Google-issued JWT directly in the browser (`atob(...)`) and trusts it as-is — no backend verifies the token's signature yet. Fine for previewing the UI, but **not real authentication**: anyone could forge a similarly-shaped payload. Needs the server-side verification step (see Tech Stack/Data Model) — the backend now exists to build this on, but it isn't done yet.
+  - `.env.example` documents `VITE_GOOGLE_CLIENT_ID`, `VITE_API_BASE_URL` (currently unused — `src/api/projects.ts` calls relative `/api/...` paths via the Vite proxy instead), and `DATABASE_URL`. Copy it to `.env.local` and fill in real values. `.gitignore` excludes `.env`.
+- **No routing exists yet.** `HomePage.tsx` still does manual `useState`-based view switching (`"start" | "project" | "drawing" | "api-test"`) instead of URL-based routes.
 
 ## Notes for Claude Code
 

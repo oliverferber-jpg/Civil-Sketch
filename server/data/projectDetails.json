@@ -1,0 +1,58 @@
+{
+  "project-1": {
+    "id": "project-1",
+    "name": "Poop",
+    "folder": "Residential",
+    "description": "Concept sketches for a modern riverside home.",
+    "drawings": [
+      {
+        "id": "drawing-1",
+        "title": "North Elevation",
+        "angle": "Front view",
+        "status": "In progress",
+        "updatedAt": "2h ago",
+        "notes": "Refine the roofline and window rhythm."
+      },
+      {
+        "id": "drawing-2",
+        "title": "Kitchen Layout",
+        "angle": "Interior perspective",
+        "status": "Draft",
+        "updatedAt": "Yesterday",
+        "notes": "Add cabinetry and island dimensions."
+      }
+    ]
+  },
+  "project-2": {
+    "id": "project-2",
+    "name": "Harbor Studio",
+    "folder": "Commercial",
+    "description": "Facade studies and interior planning for a creative studio.",
+    "drawings": [
+      {
+        "id": "drawing-3",
+        "title": "Facade Study",
+        "angle": "Street view",
+        "status": "Reviewed",
+        "updatedAt": "4 days ago",
+        "notes": "Final review for the glazing pattern."
+      }
+    ]
+  },
+  "project-3": {
+    "id": "project-3",
+    "name": "Cedar Cabin",
+    "folder": "Residential",
+    "description": "Site and elevation sketches for a small cabin retreat.",
+    "drawings": [
+      {
+        "id": "drawing-4",
+        "title": "Site Plan",
+        "angle": "Top view",
+        "status": "Draft",
+        "updatedAt": "1 week ago",
+        "notes": "Place the patio and access path."
+      }
+    ]
+  }
+}
