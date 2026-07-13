@@ -29,3 +29,10 @@ export type CreateProjectInput = {
   folder: string;
   description: string;
 };
+
+export type CreateDrawingInput = {
+  title: string;
+  angle?: string;
+  status?: string;
+  notes?: string;
+};

@@ -32,6 +32,13 @@ type CreateProjectInput = {
   description: string;
 };
 
+type CreateDrawingInput = {
+  title: string;
+  angle?: string;
+  status?: string;
+  notes?: string;
+};
+
 export async function getProjectSummaries(): Promise<ProjectSummary[]> {
   const projects = await prisma.project.findMany({
     orderBy: { name: "asc" },
@@ -129,4 +136,63 @@ export async function createProject(input: CreateProjectInput): Promise<ProjectS
   };
 }
 
-export type { ProjectDetail, ProjectSummary, DrawingSummary, CreateProjectInput };
+export async function createDrawing(
+  projectId: string,
+  input: CreateDrawingInput
+): Promise<DrawingSummary | null> {
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { id: true },
+  });
+
+  if (!project) {
+    return null;
+  }
+
+  const drawing = await prisma.drawing.create({
+    data: {
+      id: crypto.randomUUID(),
+      projectId,
+      title: input.title,
+      angle: input.angle ?? "Front view",
+      status: input.status ?? "Draft",
+      updatedAt: "just now",
+      notes: input.notes ?? "",
+    },
+    select: {
+      id: true,
+      title: true,
+      angle: true,
+      status: true,
+      updatedAt: true,
+      notes: true,
+    },
+  });
+
+  await prisma.project.update({
+    where: { id: projectId },
+    data: {
+      drawingCount: {
+        increment: 1,
+      },
+      lastUpdated: "just now",
+    },
+  });
+
+  return {
+    id: drawing.id,
+    title: drawing.title,
+    angle: drawing.angle ?? "",
+    status: drawing.status ?? "",
+    updatedAt: drawing.updatedAt ?? "",
+    notes: drawing.notes ?? "",
+  };
+}
+
+export type {
+  ProjectDetail,
+  ProjectSummary,
+  DrawingSummary,
+  CreateProjectInput,
+  CreateDrawingInput,
+};

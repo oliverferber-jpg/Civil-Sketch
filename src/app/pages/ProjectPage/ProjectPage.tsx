@@ -19,7 +19,8 @@ type ProjectPageProps = {
   project: ProjectDetail;
   onBack: () => void;
   onSelectDrawing: (drawingId: string) => void;
-  onStartNewDrawing: () => void;
+  onStartNewDrawing: () => Promise<void>;
+  creatingDrawing: boolean;
 };
 
 export default function ProjectPage({
@@ -27,6 +28,7 @@ export default function ProjectPage({
   onBack,
   onSelectDrawing,
   onStartNewDrawing,
+  creatingDrawing,
 }: ProjectPageProps) {
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
@@ -50,9 +52,10 @@ export default function ProjectPage({
             <button
               type="button"
               onClick={onStartNewDrawing}
-              className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+              disabled={creatingDrawing}
+              className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
             >
-              New drawing
+              {creatingDrawing ? "Creating..." : "New drawing"}
             </button>
           </div>
         </div>

@@ -1,4 +1,10 @@
-import type { CreateProjectInput, ProjectDetail, ProjectSummary } from "../types/projects";
+import type {
+  CreateDrawingInput,
+  CreateProjectInput,
+  DrawingSummary,
+  ProjectDetail,
+  ProjectSummary,
+} from "../types/projects";
 
 async function parseJsonResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -28,4 +34,19 @@ export async function createProject(input: CreateProjectInput): Promise<ProjectS
   });
 
   return parseJsonResponse<ProjectSummary>(response);
+}
+
+export async function createDrawing(
+  projectId: string,
+  input: CreateDrawingInput
+): Promise<DrawingSummary> {
+  const response = await fetch(`/api/projects/${projectId}/drawings`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
+  });
+
+  return parseJsonResponse<DrawingSummary>(response);
 }

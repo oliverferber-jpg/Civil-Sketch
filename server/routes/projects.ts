@@ -1,5 +1,10 @@
 import { Router } from "express";
-import { createProject, getProjectById, getProjectSummaries } from "../services/projectService";
+import {
+  createDrawing,
+  createProject,
+  getProjectById,
+  getProjectSummaries,
+} from "../services/projectService";
 
 const router = Router();
 
@@ -29,6 +34,37 @@ router.post("/", async (req, res) => {
   } catch (error) {
     console.error("Failed to create project", error);
     res.status(500).json({ error: "Could not create project" });
+  }
+});
+
+router.post("/:projectId/drawings", async (req, res) => {
+  const title = typeof req.body?.title === "string" ? req.body.title.trim() : "";
+  const angle = typeof req.body?.angle === "string" ? req.body.angle.trim() : "";
+  const status = typeof req.body?.status === "string" ? req.body.status.trim() : "";
+  const notes = typeof req.body?.notes === "string" ? req.body.notes.trim() : "";
+
+  if (!title) {
+    res.status(400).json({ error: "title is required" });
+    return;
+  }
+
+  try {
+    const drawing = await createDrawing(req.params.projectId, {
+      title,
+      angle,
+      status,
+      notes,
+    });
+
+    if (!drawing) {
+      res.status(404).json({ error: "Project not found" });
+      return;
+    }
+
+    res.status(201).json(drawing);
+  } catch (error) {
+    console.error("Failed to create drawing", error);
+    res.status(500).json({ error: "Could not create drawing" });
   }
 });
 

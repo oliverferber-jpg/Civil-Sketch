@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createProject, fetchProjectById, fetchProjects } from "../../../api/projects";
+import { createDrawing, createProject, fetchProjectById, fetchProjects } from "../../../api/projects";
 import type { ProjectDetail, ProjectSummary } from "../../../types/projects";
 import ApiTestPage from "../ApiTestPage/ApiTestPage";
 import DrawingPadPage from "../DrawingPadPage/DrawingPadPage";
@@ -23,6 +23,7 @@ export default function App() {
   const [projectsError, setProjectsError] = useState<string | null>(null);
   const [projectLoading, setProjectLoading] = useState(false);
   const [projectError, setProjectError] = useState<string | null>(null);
+  const [creatingDrawing, setCreatingDrawing] = useState(false);
 
   const loadProjects = async () => {
     setProjectsLoading(true);
@@ -62,6 +63,32 @@ export default function App() {
   }) => {
     await createProject(input);
     await loadProjects();
+  };
+
+  const handleCreateDrawing = async () => {
+    if (!selectedProjectId || creatingDrawing) {
+      return;
+    }
+
+    setCreatingDrawing(true);
+    setProjectError(null);
+
+    try {
+      const title = `New drawing ${new Date().toLocaleTimeString()}`;
+      await createDrawing(selectedProjectId, {
+        title,
+        angle: "Front view",
+        status: "Draft",
+        notes: "",
+      });
+
+      await loadProjectDetail(selectedProjectId);
+      setView("drawing");
+    } catch {
+      setProjectError("Could not create a new drawing.");
+    } finally {
+      setCreatingDrawing(false);
+    }
   };
 
   useEffect(() => {
@@ -146,8 +173,12 @@ export default function App() {
             setView("start");
             setProjectError(null);
           }}
-          onSelectDrawing={() => setView("drawing")}
-          onStartNewDrawing={() => setView("drawing")}
+          onSelectDrawing={(drawingId) => {
+            void drawingId;
+            setView("drawing");
+          }}
+          onStartNewDrawing={handleCreateDrawing}
+          creatingDrawing={creatingDrawing}
         />
       );
     }
