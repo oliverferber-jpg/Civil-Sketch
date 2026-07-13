@@ -13,15 +13,24 @@ type DrawingPadPageProps = {
 };
 
 export default function DrawingPadPage({ title = "Untitled drawing", onBack }: DrawingPadPageProps) {
-  const { armedDefectTypeId, armDefectType, placedDefects, placeDefect, removeLastDefect } = useDefectPlacement();
+  const {
+    armedDefectTypeId,
+    armDefectType,
+    placedDefects,
+    placeDefect,
+    pendingPosition,
+    cancelPending,
+    removeLastDefect,
+  } = useDefectPlacement();
   const { defectTypes, addType, renameType, removeType, isTypeInUse } = useDefectTypes(placedDefects);
   const { canUndo, pushStroke, pushDefect, peekLast, popLast, removeAllOfType } = useUndoHistory();
   const canvasRef = useRef<DrawingPadCanvasHandle>(null);
 
   const handleCanvasTap = (position: { x: number; y: number }) => {
     if (!armedDefectTypeId) return;
+    const isCompletingPlacement = pendingPosition !== null;
     placeDefect(position);
-    pushDefect();
+    if (isCompletingPlacement) pushDefect();
   };
 
   const handleUndo = () => {
@@ -60,6 +69,8 @@ export default function DrawingPadPage({ title = "Untitled drawing", onBack }: D
             onUndo={handleUndo}
             placedDefects={placedDefects}
             defectTypes={defectTypes}
+            pendingPosition={pendingPosition}
+            onCancelPending={cancelPending}
           />
         </div>
         <DefectPanel

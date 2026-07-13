@@ -19,6 +19,8 @@ type DrawingPadCanvasProps = {
   onCanvasTap?: (position: { x: number; y: number }) => void;
   placedDefects?: PlacedDefect[];
   defectTypes?: DefectType[];
+  pendingPosition?: { x: number; y: number } | null;
+  onCancelPending?: () => void;
   onStrokeComplete?: () => void;
   canUndo?: boolean;
   onUndo?: () => void;
@@ -47,6 +49,8 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
     onCanvasTap,
     placedDefects = [],
     defectTypes = [],
+    pendingPosition = null,
+    onCancelPending,
     onStrokeComplete,
     canUndo = false,
     onUndo,
@@ -143,6 +147,19 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
     return () => window.removeEventListener("resize", updateStageSize);
   }, []);
 
+  useEffect(() => {
+    if (!armedDefectTypeId) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onCancelPending?.();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [armedDefectTypeId, onCancelPending]);
+
   return (
     <Card ref={containerRef}>
       <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -213,7 +230,12 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
               globalCompositeOperation={line.tool === "eraser" ? "destination-out" : "source-over"}
             />
           ))}
-          <DefectMarkerLayer placedDefects={placedDefects} defectTypes={defectTypes} />
+          <DefectMarkerLayer
+            placedDefects={placedDefects}
+            defectTypes={defectTypes}
+            pendingPosition={pendingPosition}
+            armedDefectTypeId={armedDefectTypeId}
+          />
         </Layer>
       </Stage>
 
