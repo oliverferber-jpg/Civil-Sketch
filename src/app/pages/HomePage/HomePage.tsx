@@ -3,6 +3,7 @@ import DrawingPadPage from "../DrawingPadPage/DrawingPadPage";
 import ProjectPage from "../ProjectPage/ProjectPage";
 import SignInPage from "../SignInPage/SignInPage";
 import StartPage from "../StartPage/StartPage";
+import type { ProjectDetail, ProjectSummary } from "../../../types/project";
 
 type UserProfile = {
   name: string;
@@ -10,100 +11,119 @@ type UserProfile = {
   picture?: string;
 };
 
+const initialProjects: ProjectSummary[] = [
+  {
+    id: "project-1",
+    name: "Riverfront Residence",
+    folder: "Residential",
+    description: "Concept sketches for a modern riverside home.",
+    drawingCount: 4,
+    lastUpdated: "2 days ago",
+  },
+  {
+    id: "project-2",
+    name: "Harbor Studio",
+    folder: "Commercial",
+    description: "Facade studies and interior planning for a creative studio.",
+    drawingCount: 3,
+    lastUpdated: "1 week ago",
+  },
+  {
+    id: "project-3",
+    name: "Cedar Cabin",
+    folder: "Residential",
+    description: "Site and elevation sketches for a small cabin retreat.",
+    drawingCount: 2,
+    lastUpdated: "3 weeks ago",
+  },
+];
+
+const initialProjectDetails: Record<string, ProjectDetail> = {
+  "project-1": {
+    id: "project-1",
+    name: "Riverfront Residence",
+    folder: "Residential",
+    description: "Concept sketches for a modern riverside home.",
+    drawings: [
+      {
+        id: "drawing-1",
+        title: "North Elevation",
+        angle: "Front view",
+        status: "In progress",
+        updatedAt: "2h ago",
+        notes: "Refine the roofline and window rhythm.",
+      },
+      {
+        id: "drawing-2",
+        title: "Kitchen Layout",
+        angle: "Interior perspective",
+        status: "Draft",
+        updatedAt: "Yesterday",
+        notes: "Add cabinetry and island dimensions.",
+      },
+    ],
+  },
+  "project-2": {
+    id: "project-2",
+    name: "Harbor Studio",
+    folder: "Commercial",
+    description: "Facade studies and interior planning for a creative studio.",
+    drawings: [
+      {
+        id: "drawing-3",
+        title: "Facade Study",
+        angle: "Street view",
+        status: "Reviewed",
+        updatedAt: "4 days ago",
+        notes: "Final review for the glazing pattern.",
+      },
+    ],
+  },
+  "project-3": {
+    id: "project-3",
+    name: "Cedar Cabin",
+    folder: "Residential",
+    description: "Site and elevation sketches for a small cabin retreat.",
+    drawings: [
+      {
+        id: "drawing-4",
+        title: "Site Plan",
+        angle: "Top view",
+        status: "Draft",
+        updatedAt: "1 week ago",
+        notes: "Place the patio and access path.",
+      },
+    ],
+  },
+};
+
 export default function App() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [view, setView] = useState<"start" | "project" | "drawing">("start");
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [projects, setProjects] = useState<ProjectSummary[]>(initialProjects);
+  const [projectDetails, setProjectDetails] =
+    useState<Record<string, ProjectDetail>>(initialProjectDetails);
 
-  const projects = [
-    {
-      id: "project-1",
-      name: "Riverfront Residence",
-      folder: "Residential",
-      description: "Concept sketches for a modern riverside home.",
-      drawingCount: 4,
-      lastUpdated: "2 days ago",
-    },
-    {
-      id: "project-2",
-      name: "Harbor Studio",
-      folder: "Commercial",
-      description: "Facade studies and interior planning for a creative studio.",
-      drawingCount: 3,
-      lastUpdated: "1 week ago",
-    },
-    {
-      id: "project-3",
-      name: "Cedar Cabin",
-      folder: "Residential",
-      description: "Site and elevation sketches for a small cabin retreat.",
-      drawingCount: 2,
-      lastUpdated: "3 weeks ago",
-    },
-  ];
+  const selectedProject = selectedProjectId ? projectDetails[selectedProjectId] ?? null : null;
 
-  const projectDetails = {
-    "project-1": {
-      id: "project-1",
-      name: "Riverfront Residence",
-      folder: "Residential",
-      description: "Concept sketches for a modern riverside home.",
-      drawings: [
-        {
-          id: "drawing-1",
-          title: "North Elevation",
-          angle: "Front view",
-          status: "In progress",
-          updatedAt: "2h ago",
-          notes: "Refine the roofline and window rhythm.",
-        },
-        {
-          id: "drawing-2",
-          title: "Kitchen Layout",
-          angle: "Interior perspective",
-          status: "Draft",
-          updatedAt: "Yesterday",
-          notes: "Add cabinetry and island dimensions.",
-        },
-      ],
-    },
-    "project-2": {
-      id: "project-2",
-      name: "Harbor Studio",
-      folder: "Commercial",
-      description: "Facade studies and interior planning for a creative studio.",
-      drawings: [
-        {
-          id: "drawing-3",
-          title: "Facade Study",
-          angle: "Street view",
-          status: "Reviewed",
-          updatedAt: "4 days ago",
-          notes: "Final review for the glazing pattern.",
-        },
-      ],
-    },
-    "project-3": {
-      id: "project-3",
-      name: "Cedar Cabin",
-      folder: "Residential",
-      description: "Site and elevation sketches for a small cabin retreat.",
-      drawings: [
-        {
-          id: "drawing-4",
-          title: "Site Plan",
-          angle: "Top view",
-          status: "Draft",
-          updatedAt: "1 week ago",
-          notes: "Place the patio and access path.",
-        },
-      ],
-    },
-  } as const;
+  const handleCreateProject = () => {
+    const id = crypto.randomUUID();
+    const newProject: ProjectSummary = {
+      id,
+      name: "New Project",
+      folder: "Uncategorized",
+      description: "No description yet.",
+      drawingCount: 0,
+      lastUpdated: "Just now",
+    };
+    const newDetail: ProjectDetail = { ...newProject, drawings: [] };
 
-  const selectedProject = selectedProjectId
-    ? projectDetails[selectedProjectId as keyof typeof projectDetails]
-    : null;
+    setProjects((prev) => [...prev, newProject]);
+    setProjectDetails((prev) => ({ ...prev, [id]: newDetail }));
+    setSelectedProjectId(id);
+    setView("project");
+  };
 
   if (!user) {
     return <SignInPage onSuccess={setUser} />;
@@ -132,6 +152,7 @@ export default function App() {
           setSelectedProjectId(projectId);
           setView("project");
         }}
+        onCreateProject={handleCreateProject}
       />
     );
   };

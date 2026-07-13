@@ -1,19 +1,4 @@
-type DrawingSummary = {
-  id: string;
-  title: string;
-  angle: string;
-  status: string;
-  updatedAt: string;
-  notes: string;
-};
-
-type ProjectDetail = {
-  id: string;
-  name: string;
-  folder: string;
-  description: string;
-  drawings: DrawingSummary[];
-};
+import type { ProjectDetail } from "../../../types/project";
 
 type ProjectPageProps = {
   project: ProjectDetail;
