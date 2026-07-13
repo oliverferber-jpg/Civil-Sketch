@@ -4,60 +4,30 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
-model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String?
-  googleSub String?  @unique
-  createdAt DateTime @default(now())
-  projects  Project[]
 }
 
 model Project {
-  id          String   @id @default(uuid())
-  ownerId     String
+  id          String    @id
   name        String
   description String?
   folder      String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  owner       User     @relation(fields: [ownerId], references: [id])
+  drawingCount Int?     @default(0) @map("drawing_count")
+  lastUpdated  String?  @map("last_updated")
   drawings    Drawing[]
+
+  @@map("projects")
 }
 
 model Drawing {
-  id          String   @id @default(uuid())
-  projectId   String
+  id          String   @id
+  projectId   String   @map("project_id")
   title       String
   angle       String?
   status      String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  updatedAt   String?  @map("updated_at")
+  notes       String?
+  createdAt   DateTime? @default(now()) @map("created_at")
   project     Project  @relation(fields: [projectId], references: [id])
-  versions    DrawingVersion[]
-  assets      DrawingAsset[]
-}
 
-model DrawingVersion {
-  id            String   @id @default(uuid())
-  drawingId     String
-  versionNumber Int
-  payloadJson   Json
-  createdAt     DateTime @default(now())
-  drawing       Drawing  @relation(fields: [drawingId], references: [id])
-}
-
-model DrawingAsset {
-  id           String   @id @default(uuid())
-  drawingId    String
-  fileType     String
-  storageKey   String
-  originalName String?
-  mimeType     String?
-  sizeBytes    Int?
-  createdAt    DateTime @default(now())
-  drawing      Drawing  @relation(fields: [drawingId], references: [id])
+  @@map("drawings")
 }
