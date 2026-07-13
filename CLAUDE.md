@@ -112,7 +112,7 @@ Relational tables (PostgreSQL), replacing the earlier Firestore-collection sketc
 
 ## Backend Scaffold
 
-**Implemented, merged onto `integration/merge-backend-data` as of 2026-07-14, but not runnable out of the box — see "What's missing to actually run this" below.** This replaces the earlier "planned, not started" version of this section now that real code exists and has been merged.
+**Implemented and now actually runnable, as of 2026-07-14 (branch `chore/backend-neon-setup`).** The gaps listed in "What's missing to actually run this" below have all been closed: a real Neon Postgres database is provisioned, the initial migration (`prisma/migrations/20260713223526_init/`) has been created and applied, `server/index.ts` loads `DATABASE_URL` from a real `.env` via `npm run dev:server`'s `--env-file` flag, and the full create/list-project flow has been verified end-to-end (curl + through the actual UI) against the live database. Each developer still needs their **own** `DATABASE_URL` in their local `.env` (gitignored, never committed) — either their own Neon project/branch or one shared by the team.
 
 ### What's implemented
 
@@ -132,13 +132,16 @@ Relational tables (PostgreSQL), replacing the earlier Firestore-collection sketc
 - **Frontend wiring:** `src/api/projects.ts` (plain `fetch`, no axios client) calls all four routes above. `HomePage`/`StartPage`/`ProjectPage` do real data fetching with loading/error states, keeping `main`'s newer UI shells. A new `ApiTestPage.tsx` debug view (reachable via a 4th `"api-test"` state in `HomePage`'s hand-rolled view switch) exists purely to manually exercise `GET /api/projects` and `GET /api/projects/:id` during development.
 - **Dev wiring:** Vite proxies `/api` → `http://localhost:3000` (`vite.config.ts`), so the frontend can call relative `/api/...` paths with no `cors` package needed, same as originally planned.
 
-### What's missing to actually run this
+### What was missing to run this (resolved 2026-07-14)
 
-- **No migrations exist.** `prisma/migrations/` doesn't exist — the schema has never been migrated against a real database. First run needs `prisma migrate dev` to generate an initial migration.
-- **Prisma Client isn't generated locally** — `node_modules/@prisma` isn't present in this checkout. Needs `npm install && npm run prisma:generate` before the server can start at all.
-- **No local Postgres setup exists.** No Docker Compose file anywhere in the repo, despite that being the original plan for local dev Postgres. A developer has to stand up Postgres by hand right now.
-- **The running server doesn't load `.env`.** Nothing in `server/` imports `dotenv`; only `prisma.config.ts` does (for the Prisma CLI). So `DATABASE_URL`/`PORT` in `.env`/`.env.local` reach `prisma generate`/`prisma migrate` but **not** `server/index.ts` — the server only sees real OS environment variables as committed today.
-- **A roadmap exists to close every gap above:** provision a Neon Postgres project, set `DATABASE_URL` in a plain `.env` (not `.env.local` — see the note below on why `prisma.config.ts` requires `.env`), load it into `server/index.ts` via Node's native `--env-file=.env` flag (no new `dotenv` dependency needed — Node v20.6+ supports this natively), run `npm run prisma:generate`, then (pending explicit go-ahead per the migration guardrail) `npm run prisma:migrate -- --name init`.
+All of the following are now done — kept here as a record of what each step required:
+
+- **Migrations:** `prisma/migrations/20260713223526_init/` created via `npm run prisma:migrate -- --name init` and applied to a real Neon database, after explicit user go-ahead per the migration guardrail.
+- **Prisma Client:** generated via `npm run prisma:generate` against the real `DATABASE_URL`.
+- **Local Postgres:** provisioned as a hosted Neon free-tier project rather than Docker Compose/native install (see the Tech Stack decision above for why).
+- **Env loading:** `server/index.ts` still doesn't import `dotenv` directly, but `dev:server`'s script (`package.json`) now runs `tsx --env-file=.env server/index.ts`, using Node's native env-file support (v20.6+) instead. `DATABASE_URL` lives in a plain `.env` (not `.env.local`) because `prisma.config.ts`'s `dotenv/config` only reads `.env` by default — see the `.env.example` split above.
+
+**Still true / worth knowing:** each developer needs their own `DATABASE_URL` in a local `.env`; there's still no Docker Compose file or `dev:all` concurrent-runner script (see "Other things worth flagging" below) — running frontend + backend still means two terminals (`npm run dev` and `npm run dev:server`).
 
 ### Other things worth flagging (deliberately not fixed in the merge — see Branch/Team Status; Guardrails say ask first)
 
@@ -177,7 +180,7 @@ server/             # backend (Node.js API)
 
 ## Current Status (as of 2026-07-14, `integration/merge-backend-data`)
 
-**Backend:** see [Backend Scaffold](#backend-scaffold) above for the full picture — real Express + Prisma routes/service layer exist for `Project`/`Drawing`, merged in from `backendData`, but the setup isn't runnable without manual DB provisioning, migrations, and a Prisma Client install first.
+**Backend:** see [Backend Scaffold](#backend-scaffold) above for the full picture — real Express + Prisma routes/service layer exist for `Project`/`Drawing`, merged in from `backendData`, **and it's now actually runnable**: a Neon Postgres database is provisioned and migrated, and the create/list-project flow has been verified end-to-end (`chore/backend-neon-setup` branch).
 
 **Frontend:**
 
@@ -187,7 +190,7 @@ server/             # backend (Node.js API)
 - **Projects UI is wired to the real backend**, not mock data: `StartPage.tsx` and `ProjectPage.tsx` keep `main`'s icon-tile grid UI, now calling `src/api/projects.ts` for real create/fetch (async `onCreateProject`/`onStartNewDrawing`, loading/error state) instead of local mock state. `HomePage.tsx` (exports `App`) carries the real data-fetching logic (`loadProjects`, `loadProjectDetail`, etc.) from `backendData`. A new `ApiTestPage.tsx` debug view is also merged in, reachable via a 4th `"api-test"` state in `HomePage`'s hand-rolled view switch — still always visible in nav, not dev-gated (deferred cleanup).
 - **Test infra is intact.** Vitest, `@testing-library/*`, `vitest.config.ts`, and the `useUndoHistory`/`useDefectPlacement` test files all merged in cleanly from `main`; `npm test` still works.
 
-**Still missing** (unchanged from before, confirmed still true): photo capture/preview, reminders, pre-inspection checklist, export, offline-first sync (IndexedDB/queue), and most of the [Navigation & Auth Flow](#8-navigation--auth-flow-planned) — no real URL routing, no Marketing/Pay/Preference pages, no autosave. Projects/drawings now do hit a real (if not-yet-runnable) backend, which is the one piece of that flow that's moved. No local Postgres/migration yet — see Backend Scaffold.
+**Still missing** (unchanged from before, confirmed still true): photo capture/preview, reminders, pre-inspection checklist, export, offline-first sync (IndexedDB/queue), and most of the [Navigation & Auth Flow](#8-navigation--auth-flow-planned) — no real URL routing, no Marketing/Pay/Preference pages, no autosave. Projects/drawings now hit a real, runnable, migrated backend (Neon Postgres) — see Backend Scaffold.
 
 - **Google sign-in (frontend half) fixed 2026-07-12, still accurate.** `src/components/auth/ui/SignInCard.tsx` renders Google's real sign-in button (via `google.accounts.id.renderButton`) when `VITE_GOOGLE_CLIENT_ID` is set, and falls back to a "Continue as demo user" button when it isn't. Ambient types for `window.google` live at `src/types/google-identity.d.ts`.
   - **Still client-side only.** The callback decodes the Google-issued JWT directly in the browser (`atob(...)`) and trusts it as-is — no backend verifies the token's signature yet. Fine for previewing the UI, but **not real authentication**: anyone could forge a similarly-shaped payload. Needs the server-side verification step (see Tech Stack/Data Model) — the backend now exists to build this on, but it isn't done yet.
