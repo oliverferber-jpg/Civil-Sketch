@@ -5,7 +5,7 @@ const app = express();
 app.use(express.json());
 
 app.get("/api/health", (_req, res) => {
-  res.json({ status: "poop" });
+  res.json({ status: "ok" });
 });
 
 app.use("/api/projects", projectsRouter);

@@ -26,6 +26,12 @@ type ProjectDetail = {
   drawings: DrawingSummary[];
 };
 
+type CreateProjectInput = {
+  name: string;
+  folder: string;
+  description: string;
+};
+
 export async function getProjectSummaries(): Promise<ProjectSummary[]> {
   const projects = await prisma.project.findMany({
     orderBy: { name: "asc" },
@@ -93,4 +99,34 @@ export async function getProjectById(projectId: string): Promise<ProjectDetail |
   };
 }
 
-export type { ProjectDetail, ProjectSummary, DrawingSummary };
+export async function createProject(input: CreateProjectInput): Promise<ProjectSummary> {
+  const project = await prisma.project.create({
+    data: {
+      id: crypto.randomUUID(),
+      name: input.name,
+      folder: input.folder,
+      description: input.description,
+      drawingCount: 0,
+      lastUpdated: "just now",
+    },
+    select: {
+      id: true,
+      name: true,
+      folder: true,
+      description: true,
+      drawingCount: true,
+      lastUpdated: true,
+    },
+  });
+
+  return {
+    id: project.id,
+    name: project.name,
+    folder: project.folder ?? "Uncategorized",
+    description: project.description ?? "",
+    drawingCount: project.drawingCount ?? 0,
+    lastUpdated: project.lastUpdated ?? "Unknown",
+  };
+}
+
+export type { ProjectDetail, ProjectSummary, DrawingSummary, CreateProjectInput };

@@ -1,30 +1,6 @@
 import { useState } from "react";
-
-type ProjectSummary = {
-  id: string;
-  name: string;
-  folder: string;
-  description: string;
-  drawingCount: number;
-  lastUpdated: string;
-};
-
-type DrawingSummary = {
-  id: string;
-  title: string;
-  angle: string;
-  status: string;
-  updatedAt: string;
-  notes: string;
-};
-
-type ProjectDetail = {
-  id: string;
-  name: string;
-  folder: string;
-  description: string;
-  drawings: DrawingSummary[];
-};
+import { fetchProjectById, fetchProjects } from "../../../api/projects";
+import type { ProjectDetail, ProjectSummary } from "../../../types/projects";
 
 export default function ApiTestPage() {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
@@ -42,13 +18,7 @@ export default function ApiTestPage() {
     setDetailError(null);
 
     try {
-      const response = await fetch("/api/projects");
-
-      if (!response.ok) {
-        throw new Error("Request failed");
-      }
-
-      const data = (await response.json()) as ProjectSummary[];
+      const data = await fetchProjects();
       setProjects(data);
       setSelectedProjectId(data[0]?.id ?? "");
     } catch {
@@ -68,13 +38,7 @@ export default function ApiTestPage() {
     setDetailError(null);
 
     try {
-      const response = await fetch(`/api/projects/${selectedProjectId}`);
-
-      if (!response.ok) {
-        throw new Error("Request failed");
-      }
-
-      const data = (await response.json()) as ProjectDetail;
+      const data = await fetchProjectById(selectedProjectId);
       setProjectDetail(data);
     } catch {
       setDetailError("Could not load project details from the backend.");

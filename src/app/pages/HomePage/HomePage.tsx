@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { createProject, fetchProjectById, fetchProjects } from "../../../api/projects";
+import type { ProjectDetail, ProjectSummary } from "../../../types/projects";
 import ApiTestPage from "../ApiTestPage/ApiTestPage";
 import DrawingPadPage from "../DrawingPadPage/DrawingPadPage";
 import ProjectPage from "../ProjectPage/ProjectPage";
@@ -9,32 +11,6 @@ type UserProfile = {
   name: string;
   email: string;
   picture?: string;
-};
-
-type DrawingSummary = {
-  id: string;
-  title: string;
-  angle: string;
-  status: string;
-  updatedAt: string;
-  notes: string;
-};
-
-type ProjectDetail = {
-  id: string;
-  name: string;
-  folder: string;
-  description: string;
-  drawings: DrawingSummary[];
-};
-
-type ProjectSummary = {
-  id: string;
-  name: string;
-  folder: string;
-  description: string;
-  drawingCount: number;
-  lastUpdated: string;
 };
 
 export default function App() {
@@ -53,13 +29,7 @@ export default function App() {
     setProjectsError(null);
 
     try {
-      const response = await fetch("/api/projects");
-
-      if (!response.ok) {
-        throw new Error("Could not load projects.");
-      }
-
-      const data = (await response.json()) as ProjectSummary[];
+      const data = await fetchProjects();
       setProjects(data);
     } catch {
       setProjectsError("Could not load projects from the backend.");
@@ -76,19 +46,22 @@ export default function App() {
     setView("project");
 
     try {
-      const response = await fetch(`/api/projects/${projectId}`);
-
-      if (!response.ok) {
-        throw new Error("Could not load project details.");
-      }
-
-      const data = (await response.json()) as ProjectDetail;
+      const data = await fetchProjectById(projectId);
       setSelectedProject(data);
     } catch {
       setProjectError("Could not load this project from the backend.");
     } finally {
       setProjectLoading(false);
     }
+  };
+
+  const handleCreateProject = async (input: {
+    name: string;
+    folder: string;
+    description: string;
+  }) => {
+    await createProject(input);
+    await loadProjects();
   };
 
   useEffect(() => {
@@ -206,6 +179,7 @@ export default function App() {
       <StartPage
         projects={projects}
         onSelectProject={loadProjectDetail}
+        onCreateProject={handleCreateProject}
       />
     );
   };

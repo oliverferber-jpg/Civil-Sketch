@@ -1,18 +1,19 @@
-type ProjectSummary = {
-  id: string;
-  name: string;
-  folder: string;
-  description: string;
-  drawingCount: number;
-  lastUpdated: string;
-};
+import { useState } from "react";
+import type { CreateProjectInput, ProjectSummary } from "../../../types/projects";
 
 type StartPageProps = {
   projects: ProjectSummary[];
   onSelectProject: (projectId: string) => void;
+  onCreateProject: (input: CreateProjectInput) => Promise<void>;
 };
 
-export default function StartPage({ projects, onSelectProject }: StartPageProps) {
+export default function StartPage({ projects, onSelectProject, onCreateProject }: StartPageProps) {
+  const [name, setName] = useState("");
+  const [folder, setFolder] = useState("Uncategorized");
+  const [description, setDescription] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
   const groupedProjects = projects.reduce<Record<string, ProjectSummary[]>>(
     (groups, project) => {
       const folder = project.folder;
@@ -24,6 +25,34 @@ export default function StartPage({ projects, onSelectProject }: StartPageProps)
     },
     {}
   );
+
+  const handleCreateProject = async () => {
+    const trimmedName = name.trim();
+
+    if (!trimmedName) {
+      setCreateError("Project name is required.");
+      return;
+    }
+
+    setSubmitting(true);
+    setCreateError(null);
+
+    try {
+      await onCreateProject({
+        name: trimmedName,
+        folder: folder.trim() || "Uncategorized",
+        description: description.trim(),
+      });
+
+      setName("");
+      setFolder("Uncategorized");
+      setDescription("");
+    } catch {
+      setCreateError("Could not create project. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
@@ -40,8 +69,39 @@ export default function StartPage({ projects, onSelectProject }: StartPageProps)
               Browse your project folders, open an existing set of drawings, or begin a fresh one.
             </p>
           </div>
-          <div className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
-            {projects.length} projects available
+          <div className="flex flex-col items-start gap-2 md:items-end">
+            <div className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
+              {projects.length} projects available
+            </div>
+            <div className="grid w-full max-w-xl gap-2 md:grid-cols-3">
+              <input
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="Project name"
+                className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700"
+              />
+              <input
+                value={folder}
+                onChange={(event) => setFolder(event.target.value)}
+                placeholder="Folder"
+                className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700"
+              />
+              <button
+                type="button"
+                onClick={handleCreateProject}
+                disabled={submitting}
+                className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
+              >
+                {submitting ? "Creating..." : "Create project"}
+              </button>
+            </div>
+            <input
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder="Description"
+              className="w-full max-w-xl rounded-full border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700"
+            />
+            {createError ? <p className="text-sm text-rose-600">{createError}</p> : null}
           </div>
         </div>
       </div>
