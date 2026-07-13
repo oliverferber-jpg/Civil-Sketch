@@ -1,9 +1,11 @@
+import { useRef } from "react";
 import { ArrowLeft } from "lucide-react";
-import DrawingPadCanvas from "../../../components/sketch/ui/DrawingPadCanvas";
+import DrawingPadCanvas, { type DrawingPadCanvasHandle } from "../../../components/sketch/ui/DrawingPadCanvas";
 import { Button } from "../../../components/ui";
 import DefectPanel from "../../../features/defects/DefectPanel";
 import { useDefectPlacement } from "../../../features/defects/useDefectPlacement";
 import { useDefectTypes } from "../../../features/defects/useDefectTypes";
+import { useUndoHistory } from "../../../features/canvas/useUndoHistory";
 
 type DrawingPadPageProps = {
   title?: string;
@@ -11,8 +13,27 @@ type DrawingPadPageProps = {
 };
 
 export default function DrawingPadPage({ title = "Untitled drawing", onBack }: DrawingPadPageProps) {
-  const { armedDefectTypeId, armDefectType, placedDefects, placeDefect } = useDefectPlacement();
+  const { armedDefectTypeId, armDefectType, placedDefects, placeDefect, removeLastDefect } = useDefectPlacement();
   const { defectTypes, addType, renameType, removeType, isTypeInUse } = useDefectTypes(placedDefects);
+  const { canUndo, pushStroke, pushDefect, peekLast, popLast, removeAllOfType } = useUndoHistory();
+  const canvasRef = useRef<DrawingPadCanvasHandle>(null);
+
+  const handleCanvasTap = (position: { x: number; y: number }) => {
+    if (!armedDefectTypeId) return;
+    placeDefect(position);
+    pushDefect();
+  };
+
+  const handleUndo = () => {
+    const last = peekLast();
+    if (!last) return;
+    if (last === "stroke") {
+      canvasRef.current?.undoLastLine();
+    } else {
+      removeLastDefect();
+    }
+    popLast();
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -30,8 +51,13 @@ export default function DrawingPadPage({ title = "Untitled drawing", onBack }: D
       <div className="flex flex-col gap-4 lg:flex-row">
         <div className="lg:flex-1">
           <DrawingPadCanvas
+            ref={canvasRef}
             armedDefectTypeId={armedDefectTypeId}
-            onCanvasTap={placeDefect}
+            onCanvasTap={handleCanvasTap}
+            onStrokeComplete={pushStroke}
+            onClearStrokes={() => removeAllOfType("stroke")}
+            canUndo={canUndo}
+            onUndo={handleUndo}
             placedDefects={placedDefects}
             defectTypes={defectTypes}
           />

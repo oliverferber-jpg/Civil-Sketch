@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Stage, Layer, Line } from "react-konva";
 import type Konva from "konva";
-import { Eraser, Pencil, Trash2 } from "lucide-react";
+import { Eraser, Pencil, Trash2, Undo2 } from "lucide-react";
 import type { DefectType, PlacedDefect } from "../../../types/defect";
 import DefectMarkerLayer from "../../../features/defects/DefectMarkerLayer";
 import { Button, Card, ConfirmDialog } from "../../ui";
@@ -19,6 +19,14 @@ type DrawingPadCanvasProps = {
   onCanvasTap?: (position: { x: number; y: number }) => void;
   placedDefects?: PlacedDefect[];
   defectTypes?: DefectType[];
+  onStrokeComplete?: () => void;
+  canUndo?: boolean;
+  onUndo?: () => void;
+  onClearStrokes?: () => void;
+};
+
+export type DrawingPadCanvasHandle = {
+  undoLastLine: () => void;
 };
 
 const CANVAS_MIN_WIDTH = 320;
@@ -33,12 +41,19 @@ const DRAWING_COLORS = [
   { value: "#ef4444", label: "Defects" },
 ] as const;
 
-export default function DrawingPadCanvas({
-  armedDefectTypeId = null,
-  onCanvasTap,
-  placedDefects = [],
-  defectTypes = [],
-}: DrawingPadCanvasProps) {
+const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProps>(function DrawingPadCanvas(
+  {
+    armedDefectTypeId = null,
+    onCanvasTap,
+    placedDefects = [],
+    defectTypes = [],
+    onStrokeComplete,
+    canUndo = false,
+    onUndo,
+    onClearStrokes,
+  },
+  ref,
+) {
   const [tool, setTool] = useState<Tool>("pen");
   const [color, setColor] = useState<string>(DRAWING_COLORS[1].value);
   const [lines, setLines] = useState<DrawLine[]>([]);
@@ -46,6 +61,17 @@ export default function DrawingPadCanvas({
   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
   const isDrawing = useRef(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      undoLastLine: () => {
+        if (isDrawing.current) return;
+        setLines((prev) => prev.slice(0, -1));
+      },
+    }),
+    [],
+  );
 
   const handlePointerDown = (e: Konva.KonvaEventObject<PointerEvent>) => {
     const stage = e.target.getStage();
@@ -91,7 +117,9 @@ export default function DrawingPadCanvas({
   };
 
   const handlePointerUp = () => {
+    if (!isDrawing.current) return;
     isDrawing.current = false;
+    onStrokeComplete?.();
   };
 
   useEffect(() => {
@@ -154,7 +182,10 @@ export default function DrawingPadCanvas({
           ))}
         </div>
 
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+          <Button variant="outline" size="sm" icon={Undo2} onClick={onUndo} disabled={!canUndo}>
+            Undo
+          </Button>
           <Button variant="danger" size="sm" icon={Trash2} onClick={() => setIsClearDialogOpen(true)}>
             Clear
           </Button>
@@ -193,10 +224,13 @@ export default function DrawingPadCanvas({
         confirmLabel="Clear"
         onConfirm={() => {
           setLines([]);
+          onClearStrokes?.();
           setIsClearDialogOpen(false);
         }}
         onCancel={() => setIsClearDialogOpen(false)}
       />
     </Card>
   );
-}
+});
+
+export default DrawingPadCanvas;
