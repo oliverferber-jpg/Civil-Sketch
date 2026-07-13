@@ -8,7 +8,7 @@ An app for bridge inspectors to use in the field, replacing paper-based defect m
 
 - **Frontend:** React + TypeScript, built with Vite, styled with Tailwind CSS
 - **Backend:** Node.js API server (REST) — sits between the frontend and the database, since PostgreSQL (unlike Firestore) can't be reached directly from client code. **As of 2026-07-14**, the real Express 5 + Prisma backend from `origin/backendData` (`server/index.ts` mounting a `projects` router, Prisma-backed service layer) has been merged onto `integration/merge-backend-data` alongside `main`'s frontend work. See [Backend Scaffold](#backend-scaffold) for what's implemented and what's still needed before it's runnable (local Postgres + first migration).
-- **Database:** PostgreSQL, via Prisma. Schema exists (`prisma/schema.prisma`, `Project`/`Drawing` models) but has never been migrated — no `prisma/migrations/` directory, no DB provisioned yet.
+- **Database:** PostgreSQL, via Prisma. Schema exists (`prisma/schema.prisma`, `Project`/`Drawing` models) but has never been migrated — no `prisma/migrations/` directory, no DB provisioned yet. **Decided 2026-07-14:** local/dev Postgres is a hosted **Neon** free-tier project, not Docker Compose, a native install, or Supabase — production will use a managed Postgres regardless, so this matches dev to the real deployment target from day one. See the "Get the backend running" roadmap for the full rationale and provisioning steps.
 - **File storage:** Local disk for now (early development). PostgreSQL isn't well suited to storing binary files directly. Must be swapped for persistent cloud object storage (e.g. Cloudflare R2 or AWS S3) before deploying anywhere with ephemeral disks — most hosting platforms (Render, Fly, Railway, Heroku, etc.) don't persist local disk across redeploys. Keep local-disk file access isolated behind a small storage interface so this swap is cheap later.
 - **Version Control:** GitHub
 
@@ -138,6 +138,7 @@ Relational tables (PostgreSQL), replacing the earlier Firestore-collection sketc
 - **Prisma Client isn't generated locally** — `node_modules/@prisma` isn't present in this checkout. Needs `npm install && npm run prisma:generate` before the server can start at all.
 - **No local Postgres setup exists.** No Docker Compose file anywhere in the repo, despite that being the original plan for local dev Postgres. A developer has to stand up Postgres by hand right now.
 - **The running server doesn't load `.env`.** Nothing in `server/` imports `dotenv`; only `prisma.config.ts` does (for the Prisma CLI). So `DATABASE_URL`/`PORT` in `.env`/`.env.local` reach `prisma generate`/`prisma migrate` but **not** `server/index.ts` — the server only sees real OS environment variables as committed today.
+- **A roadmap exists to close every gap above:** provision a Neon Postgres project, set `DATABASE_URL` in `.env.local`, load it into `server/index.ts` via Node's native `--env-file` flag (no new `dotenv` dependency needed — Node v20.6+ supports this natively), run `npm run prisma:generate`, then (pending explicit go-ahead per the migration guardrail) `npm run prisma:migrate -- --name init`.
 
 ### Other things worth flagging (deliberately not fixed in the merge — see Branch/Team Status; Guardrails say ask first)
 
