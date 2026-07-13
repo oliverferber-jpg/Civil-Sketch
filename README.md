@@ -14,3 +14,15 @@ The React Compiler is not enabled on this template because of its impact on dev 
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+
+### TO-DO
+[] simplify projects page/get rid of wordy chunk
+[] ability to name individual views in a project
+[] move the back button to somewhere better on projects page
+[] lay out the actual drawing page better (+defects)
+[] ability to drag defect title around after placed
+[] ability to switch between views from the drawing page
+[] ability to upload diagrams into the app
+[] ability to export as pdf?
+[] 'wire project ownership'
+[] smth storage code
