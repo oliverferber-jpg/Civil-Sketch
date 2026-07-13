@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Stage, Layer, Line } from "react-konva";
 import type Konva from "konva";
+import { Eraser, Pencil, Trash2, Undo2 } from "lucide-react";
 import type { DefectType, PlacedDefect } from "../../../types/defect";
 import DefectMarkerLayer from "../../../features/defects/DefectMarkerLayer";
+import { Button, Card, ConfirmDialog } from "../../ui";
 
 type Tool = "pen" | "eraser";
 
@@ -17,21 +19,59 @@ type DrawingPadCanvasProps = {
   onCanvasTap?: (position: { x: number; y: number }) => void;
   placedDefects?: PlacedDefect[];
   defectTypes?: DefectType[];
+  onStrokeComplete?: () => void;
+  canUndo?: boolean;
+  onUndo?: () => void;
+  onClearStrokes?: () => void;
 };
 
-export default function DrawingPadCanvas({
-  armedDefectTypeId = null,
-  onCanvasTap,
-  placedDefects = [],
-  defectTypes = [],
-}: DrawingPadCanvasProps) {
+export type DrawingPadCanvasHandle = {
+  undoLastLine: () => void;
+};
+
+const CANVAS_MIN_WIDTH = 320;
+const CANVAS_MIN_HEIGHT = 360;
+const CANVAS_HORIZONTAL_PADDING = 32;
+const CANVAS_HEIGHT_OFFSET = 220;
+const CANVAS_ASPECT_HEIGHT_RATIO = 0.7;
+
+const DRAWING_COLORS = [
+  { value: "#0f172a", label: "Features" },
+  { value: "#2563eb", label: "Measurements" },
+  { value: "#ef4444", label: "Defects" },
+] as const;
+
+const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProps>(function DrawingPadCanvas(
+  {
+    armedDefectTypeId = null,
+    onCanvasTap,
+    placedDefects = [],
+    defectTypes = [],
+    onStrokeComplete,
+    canUndo = false,
+    onUndo,
+    onClearStrokes,
+  },
+  ref,
+) {
   const [tool, setTool] = useState<Tool>("pen");
-  const [color, setColor] = useState("#2563eb");
+  const [color, setColor] = useState<string>(DRAWING_COLORS[1].value);
   const [lines, setLines] = useState<DrawLine[]>([]);
   const [stageSize, setStageSize] = useState({ width: 900, height: 600 });
+  const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
   const isDrawing = useRef(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const palette = ["#111827", "#ef4444", "#10b981", "#2563eb", "#f59e0b", "#8b5cf6"];
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      undoLastLine: () => {
+        if (isDrawing.current) return;
+        setLines((prev) => prev.slice(0, -1));
+      },
+    }),
+    [],
+  );
 
   const handlePointerDown = (e: Konva.KonvaEventObject<PointerEvent>) => {
     const stage = e.target.getStage();
@@ -77,7 +117,9 @@ export default function DrawingPadCanvas({
   };
 
   const handlePointerUp = () => {
+    if (!isDrawing.current) return;
     isDrawing.current = false;
+    onStrokeComplete?.();
   };
 
   useEffect(() => {
@@ -85,9 +127,12 @@ export default function DrawingPadCanvas({
       if (!containerRef.current) return;
 
       const parentWidth = containerRef.current.clientWidth;
-      const availableHeight = window.innerHeight - 220;
-      const width = Math.max(320, parentWidth - 32);
-      const height = Math.max(360, Math.min(availableHeight, parentWidth * 0.7));
+      const availableHeight = window.innerHeight - CANVAS_HEIGHT_OFFSET;
+      const width = Math.max(CANVAS_MIN_WIDTH, parentWidth - CANVAS_HORIZONTAL_PADDING);
+      const height = Math.max(
+        CANVAS_MIN_HEIGHT,
+        Math.min(availableHeight, parentWidth * CANVAS_ASPECT_HEIGHT_RATIO),
+      );
 
       setStageSize({ width, height });
     };
@@ -99,45 +144,51 @@ export default function DrawingPadCanvas({
   }, []);
 
   return (
-    <div ref={containerRef} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <Card ref={containerRef}>
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <button
-          onClick={() => setTool("pen")}
-          className={`rounded-full px-3 py-2 text-sm font-semibold ${tool === "pen" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-700"}`}
-        >
-          Pen
-        </button>
-        <button
-          onClick={() => setTool("eraser")}
-          className={`rounded-full px-3 py-2 text-sm font-semibold ${tool === "eraser" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-700"}`}
-        >
-          Eraser
-        </button>
-        <button
-          onClick={() => setLines([])}
-          className="rounded-full bg-rose-500 px-3 py-2 text-sm font-semibold text-white"
-        >
-          Clear
-        </button>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" active={tool === "pen"} size="sm" icon={Pencil} onClick={() => setTool("pen")}>
+            Pen
+          </Button>
+          <Button
+            variant="ghost"
+            active={tool === "eraser"}
+            size="sm"
+            icon={Eraser}
+            onClick={() => setTool("eraser")}
+          >
+            Eraser
+          </Button>
+        </div>
 
-        <div className="ml-2 flex flex-wrap items-center gap-2">
-          <span className="text-sm font-semibold text-slate-700">Color:</span>
-          {palette.map((swatch) => (
-            <button
-              key={swatch}
-              onClick={() => setColor(swatch)}
-              aria-label={`Select ${swatch}`}
-              className={`h-6 w-6 rounded-full border ${color === swatch ? "border-2 border-slate-900" : "border-slate-300"}`}
-              style={{ backgroundColor: swatch }}
-            />
+        <div className="h-6 w-px bg-slate-200" />
+
+        <div className="flex flex-wrap items-center gap-2">
+          {DRAWING_COLORS.map((swatch) => (
+            <Button
+              key={swatch.value}
+              variant="ghost"
+              active={color === swatch.value}
+              size="sm"
+              onClick={() => setColor(swatch.value)}
+            >
+              <span
+                className="h-3 w-3 shrink-0 rounded-full"
+                style={{ backgroundColor: swatch.value }}
+                aria-hidden="true"
+              />
+              {swatch.label}
+            </Button>
           ))}
-          <input
-            type="color"
-            value={color}
-            onChange={(e) => setColor(e.target.value)}
-            aria-label="Choose drawing color"
-            className="h-8 w-8 cursor-pointer rounded-full border border-slate-300 bg-transparent p-0"
-          />
+        </div>
+
+        <div className="ml-auto flex items-center gap-2">
+          <Button variant="outline" size="sm" icon={Undo2} onClick={onUndo} disabled={!canUndo}>
+            Undo
+          </Button>
+          <Button variant="danger" size="sm" icon={Trash2} onClick={() => setIsClearDialogOpen(true)}>
+            Clear
+          </Button>
         </div>
       </div>
 
@@ -148,7 +199,6 @@ export default function DrawingPadCanvas({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         className="w-full rounded-xl border border-slate-300"
-        style={{ border: "1px solid #cbd5e1", width: "100%", height: stageSize.height }}
       >
         <Layer>
           {lines.map((line, i) => (
@@ -166,6 +216,21 @@ export default function DrawingPadCanvas({
           <DefectMarkerLayer placedDefects={placedDefects} defectTypes={defectTypes} />
         </Layer>
       </Stage>
-    </div>
+
+      <ConfirmDialog
+        open={isClearDialogOpen}
+        title="Clear this drawing?"
+        description="This removes every pen and eraser stroke on this drawing. Defect markers are not affected."
+        confirmLabel="Clear"
+        onConfirm={() => {
+          setLines([]);
+          onClearStrokes?.();
+          setIsClearDialogOpen(false);
+        }}
+        onCancel={() => setIsClearDialogOpen(false)}
+      />
+    </Card>
   );
-}
+});
+
+export default DrawingPadCanvas;
