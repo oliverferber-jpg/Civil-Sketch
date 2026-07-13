@@ -37,5 +37,17 @@ export function useDefectPlacement() {
     setPendingPosition(null);
   };
 
-  return { armedDefectTypeId, armDefectType, placedDefects, placeDefect, pendingPosition, cancelPending };
+  const removeLastDefect = () => {
+    setPlacedDefects((prev) => prev.slice(0, -1));
+  };
+
+  return {
+    armedDefectTypeId,
+    armDefectType,
+    placedDefects,
+    placeDefect,
+    pendingPosition,
+    cancelPending,
+    removeLastDefect,
+  };
 }

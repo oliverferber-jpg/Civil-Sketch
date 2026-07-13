@@ -8,8 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "vitest run",
-    "server": "node --loader ts-node/esm server/index.ts"
+    "server": "node --loader ts-node/esm server/index.ts",
+    "test": "vitest run"
   },
   "dependencies": {
     "express": "^5.2.1",
