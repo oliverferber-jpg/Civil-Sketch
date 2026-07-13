@@ -13,6 +13,7 @@
   "dependencies": {
     "express": "^5.2.1",
     "konva": "^10.3.0",
+    "lucide-react": "^1.24.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-konva": "^19.2.5"

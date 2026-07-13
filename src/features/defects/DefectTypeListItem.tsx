@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { X } from "lucide-react";
 import type { DefectType } from "../../types/defect";
+import { Button } from "../../components/ui";
 
 type PlacementItemProps = {
   mode: "place";
@@ -35,15 +37,10 @@ export default function DefectTypeListItem(props: DefectTypeListItemProps) {
   if (props.mode === "place") {
     const { defectType, isArmed, onArm } = props;
     return (
-      <button
-        onClick={onArm}
-        className={`flex w-full items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold ${
-          isArmed ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-700"
-        }`}
-      >
+      <Button variant="ghost" active={isArmed} fullWidth onClick={onArm}>
         <Swatch defectType={defectType} />
         {defectType.name}
-      </button>
+      </Button>
     );
   }
 
@@ -59,14 +56,15 @@ export default function DefectTypeListItem(props: DefectTypeListItemProps) {
         onBlur={() => onRename(draftName)}
         className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-slate-700 focus:outline-none"
       />
-      <button
-        onClick={onRemove}
+      <Button
+        variant="ghost-danger"
+        size="sm"
+        icon={X}
         disabled={isInUse}
         title={isInUse ? "In use — remove placed markers first" : "Remove"}
-        className="shrink-0 text-sm font-bold text-rose-500 disabled:cursor-not-allowed disabled:text-slate-300"
-      >
-        &times;
-      </button>
+        aria-label="Remove defect type"
+        onClick={onRemove}
+      />
     </div>
   );
 }
