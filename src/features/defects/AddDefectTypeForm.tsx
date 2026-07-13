@@ -1,6 +1,4 @@
 import { useState } from "react";
-import { Plus } from "lucide-react";
-import { Button } from "../../components/ui";
 
 const NEW_TYPE_COLOR = "#64748b";
 
@@ -25,11 +23,14 @@ export default function AddDefectTypeForm({ onAdd }: AddDefectTypeFormProps) {
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="New defect type"
-        className="flex-1 rounded-full border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        className="flex-1 rounded-full border border-slate-300 px-3 py-2 text-sm"
       />
-      <Button type="submit" icon={Plus} size="sm">
+      <button
+        type="submit"
+        className="rounded-full bg-slate-900 px-3 py-2 text-sm font-semibold text-white"
+      >
         Add
-      </Button>
+      </button>
     </form>
   );
 }

@@ -1,4 +1,4 @@
-import { Arrow, Circle, Label, Tag, Text } from "react-konva";
+import { Arrow, Circle, Text } from "react-konva";
 import type { DefectType, PlacedDefect } from "../../types/defect";
 
 type DefectMarkerLayerProps = {
@@ -37,8 +37,6 @@ export default function DefectMarkerLayer({ placedDefects, defectTypes }: Defect
             y={defect.position.y}
             radius={14}
             fill={defectType.color}
-            stroke="white"
-            strokeWidth={2}
           />
         );
       })}
@@ -66,24 +64,16 @@ export default function DefectMarkerLayer({ placedDefects, defectTypes }: Defect
         if (!defectType) return null;
 
         return (
-          <Label
+          <Text
             key={`${defect.id}-label`}
             x={defect.labelPosition.x}
             y={defect.labelPosition.y}
+            text={defectType.name}
+            fontSize={12}
+            fontStyle="bold"
+            fill="#1e293b"
             listening={false}
-          >
-            <Tag
-              fill="white"
-              stroke={defectType.color}
-              strokeWidth={1}
-              cornerRadius={4}
-              shadowColor="black"
-              shadowOpacity={0.15}
-              shadowBlur={4}
-              shadowOffsetY={1}
-            />
-            <Text text={defectType.name} fontSize={12} fontStyle="bold" fill="#1e293b" padding={4} />
-          </Label>
+          />
         );
       })}
     </>

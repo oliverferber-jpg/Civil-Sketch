@@ -1,30 +1,27 @@
-import { ArrowLeft } from "lucide-react";
 import DrawingPadCanvas from "../../../components/sketch/ui/DrawingPadCanvas";
-import { Button } from "../../../components/ui";
 import DefectPanel from "../../../features/defects/DefectPanel";
 import { useDefectPlacement } from "../../../features/defects/useDefectPlacement";
 import { useDefectTypes } from "../../../features/defects/useDefectTypes";
 
 type DrawingPadPageProps = {
-  title?: string;
   onBack?: () => void;
 };
 
-export default function DrawingPadPage({ title = "Untitled drawing", onBack }: DrawingPadPageProps) {
+export default function DrawingPadPage({ onBack }: DrawingPadPageProps) {
   const { armedDefectTypeId, armDefectType, placedDefects, placeDefect } = useDefectPlacement();
   const { defectTypes, addType, renameType, removeType, isTypeInUse } = useDefectTypes(placedDefects);
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between border-b border-slate-200 pb-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-600">Drawing</p>
-          <h1 className="text-xl font-semibold text-slate-900">{title}</h1>
-        </div>
+      <div className="flex justify-end">
         {onBack ? (
-          <Button variant="outline" icon={ArrowLeft} onClick={onBack}>
+          <button
+            type="button"
+            onClick={onBack}
+            className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100"
+          >
             Back
-          </Button>
+          </button>
         ) : null}
       </div>
       <div className="flex flex-col gap-4 lg:flex-row">
