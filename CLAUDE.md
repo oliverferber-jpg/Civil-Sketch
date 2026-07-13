@@ -7,7 +7,7 @@ An app for bridge inspectors to use in the field, replacing paper-based defect m
 ## Tech Stack
 
 - **Frontend:** React + TypeScript, built with Vite, styled with Tailwind CSS
-- **Backend:** Node.js API server (REST) — sits between the frontend and the database, since PostgreSQL (unlike Firestore) can't be reached directly from client code. **Not started yet — no `server/` directory exists in the repo as of 2026-07-12.**
+- **Backend:** Node.js API server (REST) — sits between the frontend and the database, since PostgreSQL (unlike Firestore) can't be reached directly from client code. **Two tiers as of 2026-07-13:** a minimal, unwired Express scaffold (`server/index.ts`, "Hello World" only) exists on `main`. Real progress — Prisma, a `pg` connection, routes, a service layer — lives on the unmerged `origin/backendData` branch and has not been reconciled with `main`. See [Branch / Team Status](#branch--team-status-as-of-2026-07-13).
 - **Database:** PostgreSQL. Not yet provisioned or connected — no schema/migrations exist yet.
 - **File storage:** Local disk for now (early development). PostgreSQL isn't well suited to storing binary files directly. Must be swapped for persistent cloud object storage (e.g. Cloudflare R2 or AWS S3) before deploying anywhere with ephemeral disks — most hosting platforms (Render, Fly, Railway, Heroku, etc.) don't persist local disk across redeploys. Keep local-disk file access isolated behind a small storage interface so this swap is cheap later.
 - **Version Control:** GitHub
@@ -15,6 +15,15 @@ An app for bridge inspectors to use in the field, replacing paper-based defect m
 An ORM is needed for the backend to talk to PostgreSQL, for type-safe queries and migrations. **Decided: Prisma** (confirmed 2026-07-12). Still ask before actually adding the dependency, per the guardrails below — this records the choice, it doesn't authorize installing it yet.
 
 A routing library is needed once the [Navigation & Auth Flow](#8-navigation--auth-flow-planned) below is built, since the app currently has no URL-based routing at all. **Planned: `react-router-dom`**, not yet installed — same as Prisma, this records the choice without authorizing the install; ask first per the guardrails below.
+
+## Branch / Team Status (as of 2026-07-13)
+
+The team is working in parallel across a couple of branches; this section exists so nobody has to re-derive who's doing what from `git log`. Update it as branches merge or new ones start.
+
+- **`main`** — current default branch, frontend-heavy. Has the drawing canvas, defect panel (two-tap placement + undo), and a Projects/drawing-tile grid UI, all still running on **mock in-memory data** — no live backend calls. Also has the unwired `server/index.ts` scaffold (see Tech Stack).
+- **`origin/backendData`** (Oliver Ferber) — real backend work: `server/db.ts` (pg `Pool`), `server/prisma.ts` (Prisma Client), `server/routes/projects.ts`, `server/services/projectService.ts`, mock JSON fixtures. Diverged from `main` right after the defect-panel merge (commit `7726659`) and is now **18+ commits behind** `main`'s frontend work (undo, two-tap placement, project-grid redesign, test infra aren't on this branch). Needs a deliberate merge/rebase, not a fast-forward.
+- **`origin/Server`** (previously attributed to Ariella here) **no longer exists** — that thread is resolved. Her `server/` scaffold was merged straight into `main` instead (as the minimal Express placeholder mentioned above).
+- **Open decision blocking a clean backend merge:** `origin/backendData`'s schema (and the current frontend's own types in `src/types/project.ts`) model the domain as **Project → Drawings** (`createProject({name, folder, description})`, `createDrawing`). This doesn't match the `inspections`/`faces` shape documented below in [Data Model](#data-model-starting-point--refine-as-needed). Someone needs to decide which naming/shape the team is actually building toward before backend work resumes — see the callout in that section.
 
 ## Core Features
 
@@ -83,6 +92,8 @@ Not yet decided/built, flagged here rather than assumed:
 
 ## Data Model (starting point — refine as needed)
 
+**⚠ Naming mismatch, unresolved as of 2026-07-13:** this sketch uses `inspections`/`faces`. Both the current frontend (`src/types/project.ts`: `ProjectSummary`/`ProjectDetail`/`DrawingSummary`) and the in-progress `origin/backendData` branch (`createProject`/`createDrawing`) instead use a **Project → Drawings** shape. Don't silently pick one when implementing — flag it and confirm with the team which naming/shape is intended (see [Branch / Team Status](#branch--team-status-as-of-2026-07-13)).
+
 Relational tables (PostgreSQL), replacing the earlier Firestore-collection sketch:
 
 - `inspections` — id, bridge name, date, inspector, status
@@ -110,7 +121,9 @@ Minimal first slice, scoped to unblock the Projects/File flow in [Navigation & A
 - **New dependencies this would require** (not installed — recorded for when this is actually built, same pattern as the Prisma/react-router-dom notes above): `express`, `@prisma/client`, `prisma`, `tsx`, `@types/express`, `concurrently`; drop the currently unused `nodemon`/`ts-node` devDependencies in favor of `tsx`.
 - **Explicitly out of scope even once built:** real Google ID-token verification, offline sync, the `subscriptions`/`user_preferences` tables, the file/photo storage interface.
 
-**Why it's paused:** an unmerged remote branch `origin/Server` (ariella.litwack@gmail.com) has a partial, broken attempt at this (raw Express + `pg`, not Prisma; `app.listen(PORT, ...)` references an undefined `PORT` and would crash as committed). The team decided not to build on that branch, and to coordinate with Ariella before starting fresh work here — that conversation, and what happens to `origin/Server`, isn't resolved by this plan.
+**Status update 2026-07-13:** the original blocker (`origin/Server`) is gone — Ariella's minimal scaffold was merged into `main` directly instead. The plan below is superseded in practice by `origin/backendData` (Oliver Ferber), which has gone further than this doc anticipated (Prisma + `pg` + routes + a service layer) but diverged before `main`'s recent frontend work and uses a Project/Drawings shape rather than Inspection/Faces — see [Branch / Team Status](#branch--team-status-as-of-2026-07-13) for what's actually there and what needs reconciling before this scaffold plan is still worth following as written.
+
+**Housekeeping flag:** `server/server.env` is currently committed to git (placeholder DB credentials only, not live secrets) instead of following the gitignored `.env`/`.env.example` pattern the frontend already uses. Worth cleaning up before real credentials ever land in that file — flagging here rather than fixing directly, since touching backend config falls under the Guardrails below.
 
 ## Conventions
 
@@ -138,14 +151,23 @@ server/             # backend (Node.js API)
   db/               # PostgreSQL connection, schema/migrations, ORM models
 ```
 
-## Current Status (as of 2026-07-12)
+## Current Status (as of 2026-07-13)
 
-- **Frontend scaffold exists:** `HomePage` → `SignInPage`/`SignInCard` → `DrawingPadPage`/`DrawingPadCanvas` (Konva-based canvas with the three drawing colors already implemented). No defect panel, photos, checklists, export, or offline sync yet.
-- **Backend does not exist.** There's no `server/` directory, no API routes, no DB connection. This needs to be scaffolded from scratch before any real GET/POST work can happen. A concrete plan for the first slice already exists — see [Backend Scaffold (planned)](#backend-scaffold-planned) — but is paused pending coordination with a teammate over an unmerged branch that attempted the same thing.
-- **Google sign-in (frontend half) fixed 2026-07-12.** `src/components/auth/ui/SignInCard.tsx` previously had a broken stub (a custom button that `POST`ed a fake `{ provider: "google" }` payload to a nonexistent backend) alongside dead code for the real Google Identity Services flow. That's been cleaned up: the component now renders Google's real sign-in button (via `google.accounts.id.renderButton`) when `VITE_GOOGLE_CLIENT_ID` is set, and falls back to a "Continue as demo user" button when it isn't. Ambient types for `window.google` were added at `src/types/google-identity.d.ts` (previously untyped, would fail `tsc`).
-  - **Still client-side only.** The callback decodes the Google-issued JWT directly in the browser (`atob(...)`) and trusts it as-is — there is still no backend verifying the token's signature. This is fine for previewing the UI, but is **not real authentication** yet: anyone could forge a similarly-shaped payload. Real auth still requires the backend step described earlier (verify the ID token server-side with `google-auth-library`, issue the app's own session) — not done yet, since it needs the backend to exist first.
-  - `.env.example` now documents `VITE_GOOGLE_CLIENT_ID`; copy it to `.env.local` and fill in a real Google OAuth Client ID (from Google Cloud Console) to test the real button locally. `.gitignore` now excludes `.env`.
-- **No routing exists yet.** `src/main.tsx` renders `HomePage` directly, which does manual `useState`-based conditional rendering (sign-in gate → hardcoded shell → `DrawingPadPage`) instead of URL-based routes. The planned [Navigation & Auth Flow](#8-navigation--auth-flow-planned) (Marketing Page, Pay, Preference Page, Projects list, per-inspection File routes) is fully unimplemented — no Projects/inspections list, no Pay or Preference pages, and no autosave in `DrawingPadCanvas.tsx` (drawing state lives only in `useState` and is lost on unmount/refresh).
+**What's built on `main`:**
+
+- **Drawing canvas:** `DrawingPadPage`/`DrawingPadCanvas.tsx` (Konva-based), pen/eraser, all three drawing colors implemented. Drawing state (Konva lines) still lives only in component `useState` — nothing persists across refresh yet, and there's no diagram-image upload/background, just a blank canvas.
+- **Defect panel:** `src/features/defects/` (`DefectPanel.tsx`, `DefectMarkerLayer.tsx`, `useDefectPlacement.ts`, `useDefectTypes.ts`, `defectTypeSeed.ts`) — 4 preloaded defect types (Crack, Chipping, Spalling, Corrosion), editable master list (add/rename/remove, guarded against removing a type that's in use). Placement is **two-tap**: first tap arms a marker at that position, second tap sets the label position and draws the leader line; re-tapping the armed type or pressing Escape cancels it.
+- **Undo:** `src/features/canvas/useUndoHistory.ts` tracks a shared stroke/defect stack; wired into `DrawingPadPage` via an Undo button (`undoLastLine`, `removeLastDefect`). Undo only, no redo. `ConfirmDialog` guards the separate "clear canvas" action.
+- **Projects UI:** `StartPage.tsx` (flat folder-icon grid, "+" tile creates a mock project) and `ProjectPage.tsx` (grid of drawing tiles within a project) — both still running on hardcoded/mock in-memory data in `HomePage.tsx`, no routing, no backend calls yet.
+- **Test infra:** Vitest + Testing Library added (`npm test`); `useUndoHistory` and `useDefectPlacement` have unit tests.
+- **`server/` scaffold exists** but is minimal and unwired — see [Tech Stack](#tech-stack) and [Branch / Team Status](#branch--team-status-as-of-2026-07-13) for the fuller (unmerged) backend picture.
+
+**Still missing** (unchanged from before, confirmed still true): photo capture/preview, reminders, pre-inspection checklist, export, offline-first sync (IndexedDB/queue), and all of the [Navigation & Auth Flow](#8-navigation--auth-flow-planned) — no real URL routing, no Marketing/Pay/Preference pages, no Projects/inspections list backed by the DB, no autosave.
+
+- **Google sign-in (frontend half) fixed 2026-07-12, still accurate.** `src/components/auth/ui/SignInCard.tsx` renders Google's real sign-in button (via `google.accounts.id.renderButton`) when `VITE_GOOGLE_CLIENT_ID` is set, and falls back to a "Continue as demo user" button when it isn't. Ambient types for `window.google` live at `src/types/google-identity.d.ts`.
+  - **Still client-side only.** The callback decodes the Google-issued JWT directly in the browser (`atob(...)`) and trusts it as-is — no backend verifies the token's signature yet. Fine for previewing the UI, but **not real authentication**: anyone could forge a similarly-shaped payload. Needs the server-side verification step (see Tech Stack/Data Model) once the backend situation is sorted out.
+  - `.env.example` documents `VITE_GOOGLE_CLIENT_ID`; copy it to `.env.local` and fill in a real Google OAuth Client ID to test the real button locally. `.gitignore` excludes `.env`.
+- **No routing exists yet.** `src/main.tsx` renders `HomePage` directly, which does manual `useState`-based view switching (`"start" | "project" | "drawing"`) instead of URL-based routes.
 
 ## Notes for Claude Code
 
