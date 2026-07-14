@@ -25,6 +25,7 @@ type DrawingPadCanvasProps = {
   canUndo?: boolean;
   onUndo?: () => void;
   onClearStrokes?: () => void;
+  onToolSelect?: (tool: "pen" | "eraser") => void;
 };
 
 export type DrawingPadCanvasHandle = {
@@ -55,6 +56,7 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
     canUndo = false,
     onUndo,
     onClearStrokes,
+    onToolSelect,
   },
   ref,
 ) {
@@ -172,7 +174,16 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
     <Card ref={containerRef}>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-2">
-          <Button variant="ghost" active={tool === "pen"} size="sm" icon={Pencil} onClick={() => setTool("pen")}>
+          <Button
+            variant="ghost"
+            active={tool === "pen"}
+            size="sm"
+            icon={Pencil}
+            onClick={() => {
+              setTool("pen");
+              onToolSelect?.("pen");
+            }}
+          >
             Pen
           </Button>
           <Button
@@ -180,7 +191,10 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
             active={tool === "eraser"}
             size="sm"
             icon={Eraser}
-            onClick={() => setTool("eraser")}
+            onClick={() => {
+              setTool("eraser");
+              onToolSelect?.("eraser");
+            }}
           >
             Eraser
           </Button>
