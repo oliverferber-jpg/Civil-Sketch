@@ -15,6 +15,16 @@ export async function loginWithGoogle(idToken: string): Promise<UserProfile> {
   return user;
 }
 
+export async function loginDemo(): Promise<UserProfile> {
+  const response = await fetch("/api/auth/demo", {
+    method: "POST",
+    credentials: "include",
+  });
+
+  const { user } = await parseJsonResponse<{ user: UserProfile }>(response);
+  return user;
+}
+
 export async function fetchCurrentUser(): Promise<UserProfile | null> {
   const response = await fetch("/api/auth/me", {
     credentials: "include",
