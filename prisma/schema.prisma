@@ -8,6 +8,8 @@ datasource db {
 
 model Project {
   id          String    @id
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id])
   name        String
   description String?
   folder      String?
@@ -33,12 +35,13 @@ model Drawing {
 }
 
 model User {
-  id        String   @id
-  email     String   @unique
+  id        String    @id
+  email     String    @unique
   name      String
   picture   String?
-  googleSub String   @unique @map("google_sub")
-  createdAt DateTime @default(now()) @map("created_at")
+  googleSub String    @unique @map("google_sub")
+  createdAt DateTime  @default(now()) @map("created_at")
+  projects  Project[]
 
   @@map("users")
 }
