@@ -71,6 +71,11 @@ export default function DrawingPadPage({ title = "Untitled drawing", onBack }: D
             defectTypes={defectTypes}
             pendingPosition={pendingPosition}
             onCancelPending={cancelPending}
+            onToolSelect={() => {
+              if (armedDefectTypeId) {
+                armDefectType(armedDefectTypeId);
+              }
+            }}
           />
         </div>
         <DefectPanel
