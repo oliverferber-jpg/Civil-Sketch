@@ -1,10 +1,5 @@
 import SignInCard from "../../../components/auth/ui/SignInCard";
-
-type UserProfile = {
-  name: string;
-  email: string;
-  picture?: string;
-};
+import type { UserProfile } from "../../../types/user";
 
 type SignInPageProps = {
   onSuccess: (user: UserProfile) => void;
