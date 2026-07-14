@@ -53,6 +53,9 @@ const DRAWING_COLORS = [
   { value: "#0f172a"},
   { value: "#2563eb"},
   { value: "#ef4444"},
+  { value: "#0f172a"},
+  { value: "#2563eb"},
+  { value: "#ef4444"},
 ] as const;
 
 const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProps>(function DrawingPadCanvas(
@@ -296,42 +299,90 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
     <Card ref={containerRef}>
       <div className="mb-3">
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            icon={FileUp}
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isBackgroundLoading}
-          >
-            {isBackgroundLoading ? "Loading PDF..." : background ? "Replace PDF" : "Upload PDF"}
-          </Button>
-          {background ? (
-            <Button variant="ghost-danger" size="sm" icon={X} onClick={clearBackground}>
-              Remove PDF
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              active={tool === "pen"}
+              size="sm"
+              icon={Pencil}
+              onClick={() => {
+                setTool("pen");
+                onToolSelect?.("pen");
+              }}
+            >
+              Pen
             </Button>
-          ) : null}
-          {background?.name ? (
-            <span className="max-w-64 truncate text-xs font-medium text-slate-500" title={background.name}>
-              {background.name}
-            </span>
-          ) : null}
+            <Button
+              variant="ghost"
+              active={tool === "eraser"}
+              size="sm"
+              icon={Eraser}
+              onClick={() => {
+                setTool("eraser");
+                onToolSelect?.("eraser");
+              }}
+            >
+              Eraser
+            </Button>
+          </div>
+
+          <div className="h-6 w-px bg-slate-200" />
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/pdf,.pdf"
+            className="hidden"
+            onChange={(event) => {
+              const selectedFile = event.target.files?.[0] ?? null;
+              void handlePdfSelection(selectedFile);
+            }}
+          />
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              icon={FileUp}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isBackgroundLoading}
+            >
+              {isBackgroundLoading ? "Loading PDF..." : backgroundImage ? "Replace PDF" : "Upload PDF"}
+            </Button>
+            {backgroundImage ? (
+              <Button variant="ghost-danger" size="sm" icon={X} onClick={clearBackground}>
+                Remove PDF
+              </Button>
+            ) : null}
+            {backgroundSourceName ? (
+              <span className="max-w-64 truncate text-xs font-medium text-slate-500" title={backgroundSourceName}>
+                {backgroundSourceName}
+              </span>
+            ) : null}
+          </div>
+
+          <div className="ml-auto flex items-center gap-2">
+            <Button variant="outline" size="sm" icon={Undo2} onClick={onUndo} disabled={!canUndo}>
+              Undo
+            </Button>
+            <Button variant="danger" size="sm" icon={Trash2} onClick={() => setIsClearDialogOpen(true)}>
+              Clear
+            </Button>
+          </div>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="mt-3 grid grid-cols-3 gap-2">
           {DRAWING_COLORS.map((swatch) => (
             <Button
               key={swatch.value}
               variant="ghost"
               active={color === swatch.value}
               size="sm"
-              className={`rounded-xl border-2 transition-all duration-150 ease-out ${
-                color === swatch.value
-                  ? "h-[3.25rem] w-[3.25rem] border-slate-900"
-                  : "h-10 w-10 border-transparent"
-              }`}
+              className={`h-10 rounded-xl border-2 ${color === swatch.value ? "border-slate-900" : "border-transparent"}`}
               style={{ backgroundColor: swatch.value }}
               aria-label={`Select ${swatch.value} drawing color`}
               onClick={() => setColor(swatch.value)}
+            />
             />
           ))}
         </div>
