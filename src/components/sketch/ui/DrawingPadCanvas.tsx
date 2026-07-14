@@ -6,7 +6,7 @@ import type { DefectType, PlacedDefect } from "../../../types/defect";
 import DefectMarkerLayer from "../../../features/defects/DefectMarkerLayer";
 import { Button, Card, ConfirmDialog } from "../../ui";
 
-type Tool = "pen" | "eraser";
+type Tool = "pen" | "eraser" | null;
 
 type DrawLine = {
   tool: Tool;
@@ -88,6 +88,8 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
       return;
     }
 
+    if (!tool) return;
+
     isDrawing.current = true;
 
     setLines((prevLines) => [
@@ -146,6 +148,12 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
 
     return () => window.removeEventListener("resize", updateStageSize);
   }, []);
+
+  useEffect(() => {
+    if (armedDefectTypeId) {
+      setTool(null);
+    }
+  }, [armedDefectTypeId]);
 
   useEffect(() => {
     if (!armedDefectTypeId) return;
