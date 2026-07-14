@@ -45,3 +45,25 @@ export async function createDrawing(
 
   return parseJsonResponse<DrawingSummary>(response);
 }
+
+export async function renameDrawing(projectId: string, drawingId: string, title: string): Promise<DrawingSummary> {
+  const response = await fetch(`/api/projects/${projectId}/drawings/${drawingId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+    body: JSON.stringify({ title }),
+  });
+
+  return parseJsonResponse<DrawingSummary>(response);
+}
+
+export async function deleteDrawing(projectId: string, drawingId: string): Promise<void> {
+  const response = await fetch(`/api/projects/${projectId}/drawings/${drawingId}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+
+  await parseJsonResponse<void>(response);
+}
