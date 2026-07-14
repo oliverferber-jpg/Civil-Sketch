@@ -349,6 +349,14 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
             >
               {isBackgroundLoading ? "Loading PDF..." : backgroundImage ? "Replace PDF" : "Upload PDF"}
             </Button>
+            <div className="min-w-[220px] flex-1">
+              <DefectTypeDropdown
+                defectTypes={defectTypes}
+                armedDefectTypeId={armedDefectTypeId}
+                onArmDefectType={onArmDefectType}
+                onAddType={onAddType}
+              />
+            </div>
             {backgroundImage ? (
               <Button variant="ghost-danger" size="sm" icon={X} onClick={clearBackground}>
                 Remove PDF
@@ -371,14 +379,18 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
           </div>
         </div>
 
-        <div className="mt-3 grid grid-cols-3 gap-2">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           {DRAWING_COLORS.map((swatch) => (
             <Button
               key={swatch.value}
               variant="ghost"
               active={color === swatch.value}
               size="sm"
-              className={`h-10 rounded-xl border-2 ${color === swatch.value ? "border-slate-900" : "border-transparent"}`}
+              className={`rounded-xl border-2 transition-all duration-150 ease-out ${
+                color === swatch.value
+                  ? "h-[3.25rem] w-[3.25rem] border-slate-900"
+                  : "h-10 w-10 border-transparent"
+              }`}
               style={{ backgroundColor: swatch.value }}
               aria-label={`Select ${swatch.value} drawing color`}
               onClick={() => setColor(swatch.value)}

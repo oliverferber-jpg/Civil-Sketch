@@ -68,8 +68,8 @@ function DrawingPadWorkspace({ loadedRecord, scheduleSave }: DrawingPadWorkspace
     pendingPosition,
     cancelPending,
     removeLastDefect,
-  } = useDefectPlacement(loadedRecord.placedDefects);
-  const { defectTypes, addType, renameType, removeType, isTypeInUse } = useDefectTypes(placedDefects);
+  } = useDefectPlacement();
+  const { defectTypes, addType } = useDefectTypes(placedDefects);
   const { canUndo, pushStroke, pushDefect, peekLast, popLast, removeAllOfType } = useUndoHistory();
   const canvasRef = useRef<DrawingPadCanvasHandle>(null);
 
@@ -99,14 +99,21 @@ function DrawingPadWorkspace({ loadedRecord, scheduleSave }: DrawingPadWorkspace
   };
 
   return (
-    <div className="flex flex-col gap-4 lg:flex-row">
-      <div className="lg:flex-1">
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-600">Drawing</p>
+          <h1 className="text-xl font-semibold text-slate-900">{title}</h1>
+        </div>
+        {onBack ? (
+          <Button variant="outline" icon={ArrowLeft} onClick={onBack}>
+            Back
+          </Button>
+        ) : null}
+      </div>
+      <div className="flex flex-col gap-4">
         <DrawingPadCanvas
           ref={canvasRef}
-          lines={lines}
-          onLinesChange={setLines}
-          background={background}
-          onBackgroundChange={setBackground}
           armedDefectTypeId={armedDefectTypeId}
           onCanvasTap={handleCanvasTap}
           onStrokeComplete={pushStroke}
@@ -122,17 +129,10 @@ function DrawingPadWorkspace({ loadedRecord, scheduleSave }: DrawingPadWorkspace
               armDefectType(armedDefectTypeId);
             }
           }}
+          onArmDefectType={armDefectType}
+          onAddType={addType}
         />
       </div>
-      <DefectPanel
-        defectTypes={defectTypes}
-        armedDefectTypeId={armedDefectTypeId}
-        onArmDefectType={armDefectType}
-        onAddType={addType}
-        onRenameType={renameType}
-        onRemoveType={removeType}
-        isTypeInUse={isTypeInUse}
-      />
     </div>
   );
 }
