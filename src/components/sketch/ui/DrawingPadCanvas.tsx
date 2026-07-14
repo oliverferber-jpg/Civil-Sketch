@@ -6,7 +6,7 @@ import type { DefectType, PlacedDefect } from "../../../types/defect";
 import DefectMarkerLayer from "../../../features/defects/DefectMarkerLayer";
 import { Button, Card, ConfirmDialog } from "../../ui";
 
-type Tool = "pen" | "eraser";
+type Tool = "pen" | "eraser" | null;
 
 type DrawLine = {
   tool: Tool;
@@ -25,6 +25,7 @@ type DrawingPadCanvasProps = {
   canUndo?: boolean;
   onUndo?: () => void;
   onClearStrokes?: () => void;
+  onToolSelect?: (tool: "pen" | "eraser") => void;
 };
 
 export type DrawingPadCanvasHandle = {
@@ -55,6 +56,7 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
     canUndo = false,
     onUndo,
     onClearStrokes,
+    onToolSelect,
   },
   ref,
 ) {
@@ -109,6 +111,8 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
       onCanvasTap?.(pos);
       return;
     }
+
+    if (!tool) return;
 
     isDrawing.current = true;
 
@@ -168,6 +172,12 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
 
     return () => window.removeEventListener("resize", updateStageSize);
   }, []);
+
+  useEffect(() => {
+    if (armedDefectTypeId) {
+      setTool(null);
+    }
+  }, [armedDefectTypeId]);
 
   useEffect(() => {
     if (!armedDefectTypeId) return;
@@ -248,7 +258,16 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
     <Card ref={containerRef}>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-2">
-          <Button variant="ghost" active={tool === "pen"} size="sm" icon={Pencil} onClick={() => setTool("pen")}>
+          <Button
+            variant="ghost"
+            active={tool === "pen"}
+            size="sm"
+            icon={Pencil}
+            onClick={() => {
+              setTool("pen");
+              onToolSelect?.("pen");
+            }}
+          >
             Pen
           </Button>
           <Button
@@ -256,7 +275,10 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
             active={tool === "eraser"}
             size="sm"
             icon={Eraser}
-            onClick={() => setTool("eraser")}
+            onClick={() => {
+              setTool("eraser");
+              onToolSelect?.("eraser");
+            }}
           >
             Eraser
           </Button>
