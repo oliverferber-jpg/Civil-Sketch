@@ -6,6 +6,8 @@ import type { DefectType, PlacedDefect } from "../../../types/defect";
 import DefectMarkerLayer from "../../../features/defects/DefectMarkerLayer";
 import { Button, Card, ConfirmDialog } from "../../ui";
 
+//Creates the Canvas for the drawing pad as well as the features for actually drawing
+
 type Tool = "pen" | "eraser" | null;
 
 type DrawLine = {
@@ -39,9 +41,9 @@ const CANVAS_HEIGHT_OFFSET = 220;
 const CANVAS_ASPECT_HEIGHT_RATIO = 0.7;
 
 const DRAWING_COLORS = [
-  { value: "#0f172a", label: "Features" },
-  { value: "#2563eb", label: "Measurements" },
-  { value: "#ef4444", label: "Defects" },
+  { value: "#0f172a"},
+  { value: "#2563eb"},
+  { value: "#ef4444"},
 ] as const;
 
 const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProps>(function DrawingPadCanvas(
@@ -256,97 +258,93 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
 
   return (
     <Card ref={containerRef}>
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            active={tool === "pen"}
-            size="sm"
-            icon={Pencil}
-            onClick={() => {
-              setTool("pen");
-              onToolSelect?.("pen");
-            }}
-          >
-            Pen
-          </Button>
-          <Button
-            variant="ghost"
-            active={tool === "eraser"}
-            size="sm"
-            icon={Eraser}
-            onClick={() => {
-              setTool("eraser");
-              onToolSelect?.("eraser");
-            }}
-          >
-            Eraser
-          </Button>
-        </div>
-
-        <div className="h-6 w-px bg-slate-200" />
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="application/pdf,.pdf"
-          className="hidden"
-          onChange={(event) => {
-            const selectedFile = event.target.files?.[0] ?? null;
-            void handlePdfSelection(selectedFile);
-          }}
-        />
-
+      <div className="mb-3">
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            icon={FileUp}
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isBackgroundLoading}
-          >
-            {isBackgroundLoading ? "Loading PDF..." : backgroundImage ? "Replace PDF" : "Upload PDF"}
-          </Button>
-          {backgroundImage ? (
-            <Button variant="ghost-danger" size="sm" icon={X} onClick={clearBackground}>
-              Remove PDF
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              active={tool === "pen"}
+              size="sm"
+              icon={Pencil}
+              onClick={() => {
+                setTool("pen");
+                onToolSelect?.("pen");
+              }}
+            >
+              Pen
             </Button>
-          ) : null}
-          {backgroundSourceName ? (
-            <span className="max-w-64 truncate text-xs font-medium text-slate-500" title={backgroundSourceName}>
-              {backgroundSourceName}
-            </span>
-          ) : null}
+            <Button
+              variant="ghost"
+              active={tool === "eraser"}
+              size="sm"
+              icon={Eraser}
+              onClick={() => {
+                setTool("eraser");
+                onToolSelect?.("eraser");
+              }}
+            >
+              Eraser
+            </Button>
+          </div>
+
+          <div className="h-6 w-px bg-slate-200" />
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/pdf,.pdf"
+            className="hidden"
+            onChange={(event) => {
+              const selectedFile = event.target.files?.[0] ?? null;
+              void handlePdfSelection(selectedFile);
+            }}
+          />
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              icon={FileUp}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isBackgroundLoading}
+            >
+              {isBackgroundLoading ? "Loading PDF..." : backgroundImage ? "Replace PDF" : "Upload PDF"}
+            </Button>
+            {backgroundImage ? (
+              <Button variant="ghost-danger" size="sm" icon={X} onClick={clearBackground}>
+                Remove PDF
+              </Button>
+            ) : null}
+            {backgroundSourceName ? (
+              <span className="max-w-64 truncate text-xs font-medium text-slate-500" title={backgroundSourceName}>
+                {backgroundSourceName}
+              </span>
+            ) : null}
+          </div>
+
+          <div className="ml-auto flex items-center gap-2">
+            <Button variant="outline" size="sm" icon={Undo2} onClick={onUndo} disabled={!canUndo}>
+              Undo
+            </Button>
+            <Button variant="danger" size="sm" icon={Trash2} onClick={() => setIsClearDialogOpen(true)}>
+              Clear
+            </Button>
+          </div>
         </div>
 
-        <div className="h-6 w-px bg-slate-200" />
-
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="mt-3 grid grid-cols-3 gap-2">
           {DRAWING_COLORS.map((swatch) => (
             <Button
               key={swatch.value}
               variant="ghost"
               active={color === swatch.value}
               size="sm"
+              className={`h-10 rounded-xl border-2 ${color === swatch.value ? "border-slate-900" : "border-transparent"}`}
+              style={{ backgroundColor: swatch.value }}
+              aria-label={`Select ${swatch.value} drawing color`}
               onClick={() => setColor(swatch.value)}
-            >
-              <span
-                className="h-3 w-3 shrink-0 rounded-full"
-                style={{ backgroundColor: swatch.value }}
-                aria-hidden="true"
-              />
-              {swatch.label}
-            </Button>
+            />
           ))}
-        </div>
-
-        <div className="ml-auto flex items-center gap-2">
-          <Button variant="outline" size="sm" icon={Undo2} onClick={onUndo} disabled={!canUndo}>
-            Undo
-          </Button>
-          <Button variant="danger" size="sm" icon={Trash2} onClick={() => setIsClearDialogOpen(true)}>
-            Clear
-          </Button>
         </div>
       </div>
 
