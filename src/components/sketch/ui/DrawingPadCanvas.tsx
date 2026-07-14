@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { Stage, Layer, Line, Image as KonvaImage } from "react-konva";
 import type Konva from "konva";
 import { Eraser, FileUp, Pencil, Trash2, Undo2, X } from "lucide-react";
@@ -8,13 +8,19 @@ import { Button, Card, ConfirmDialog } from "../../ui";
 
 type Tool = "pen" | "eraser" | null;
 
-type DrawLine = {
+export type DrawLine = {
   tool: Tool;
   color: string;
   points: number[];
 };
 
+export type DrawingBackground = { blob: Blob; name: string };
+
 type DrawingPadCanvasProps = {
+  lines: DrawLine[];
+  onLinesChange: Dispatch<SetStateAction<DrawLine[]>>;
+  background: DrawingBackground | null;
+  onBackgroundChange: (background: DrawingBackground | null) => void;
   armedDefectTypeId?: string | null;
   onCanvasTap?: (position: { x: number; y: number }) => void;
   placedDefects?: PlacedDefect[];
@@ -46,6 +52,10 @@ const DRAWING_COLORS = [
 
 const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProps>(function DrawingPadCanvas(
   {
+    lines,
+    onLinesChange,
+    background,
+    onBackgroundChange,
     armedDefectTypeId = null,
     onCanvasTap,
     placedDefects = [],
@@ -62,11 +72,9 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
 ) {
   const [tool, setTool] = useState<Tool>("pen");
   const [color, setColor] = useState<string>(DRAWING_COLORS[1].value);
-  const [lines, setLines] = useState<DrawLine[]>([]);
   const [stageSize, setStageSize] = useState({ width: 900, height: 600 });
   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
-  const [backgroundImage, setBackgroundImage] = useState<HTMLImageElement | null>(null);
-  const [backgroundSourceName, setBackgroundSourceName] = useState<string | null>(null);
+  const [derivedBackgroundImage, setDerivedBackgroundImage] = useState<HTMLImageElement | null>(null);
   const [isBackgroundLoading, setIsBackgroundLoading] = useState(false);
   const [backgroundError, setBackgroundError] = useState<string | null>(null);
   const isDrawing = useRef(false);
@@ -74,13 +82,13 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const backgroundPlacement = useMemo(() => {
-    if (!backgroundImage) return null;
+    if (!derivedBackgroundImage) return null;
 
-    const widthRatio = stageSize.width / backgroundImage.width;
-    const heightRatio = stageSize.height / backgroundImage.height;
+    const widthRatio = stageSize.width / derivedBackgroundImage.width;
+    const heightRatio = stageSize.height / derivedBackgroundImage.height;
     const scale = Math.min(widthRatio, heightRatio);
-    const width = backgroundImage.width * scale;
-    const height = backgroundImage.height * scale;
+    const width = derivedBackgroundImage.width * scale;
+    const height = derivedBackgroundImage.height * scale;
 
     return {
       x: (stageSize.width - width) / 2,
@@ -88,17 +96,41 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
       width,
       height,
     };
-  }, [backgroundImage, stageSize.height, stageSize.width]);
+  }, [derivedBackgroundImage, stageSize.height, stageSize.width]);
+
+  useEffect(() => {
+    if (!background) {
+      setDerivedBackgroundImage(null);
+      return;
+    }
+
+    let cancelled = false;
+    const objectUrl = URL.createObjectURL(background.blob);
+    const image = new window.Image();
+
+    image.onload = () => {
+      if (!cancelled) setDerivedBackgroundImage(image);
+    };
+    image.onerror = () => {
+      if (!cancelled) setBackgroundError("Could not render the saved background image.");
+    };
+    image.src = objectUrl;
+
+    return () => {
+      cancelled = true;
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [background]);
 
   useImperativeHandle(
     ref,
     () => ({
       undoLastLine: () => {
         if (isDrawing.current) return;
-        setLines((prev) => prev.slice(0, -1));
+        onLinesChange((prev) => prev.slice(0, -1));
       },
     }),
-    [],
+    [onLinesChange],
   );
 
   const handlePointerDown = (e: Konva.KonvaEventObject<PointerEvent>) => {
@@ -116,8 +148,8 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
 
     isDrawing.current = true;
 
-    setLines((prevLines) => [
-      ...prevLines,
+    onLinesChange((prev) => [
+      ...prev,
       {
         tool,
         color: tool === "pen" ? color : "white",
@@ -134,15 +166,16 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
 
     if (!point) return;
 
-    setLines((prevLines) => {
-      const lastLine = prevLines[prevLines.length - 1];
+    onLinesChange((prev) => {
+      const lastLine = prev[prev.length - 1];
+      if (!lastLine) return prev;
 
       const updatedLine = {
         ...lastLine,
         points: lastLine.points.concat([point.x, point.y]),
       };
 
-      return [...prevLines.slice(0, -1), updatedLine];
+      return [...prev.slice(0, -1), updatedLine];
     });
   };
 
@@ -227,15 +260,14 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
 
       await page.render({ canvasContext: context, viewport }).promise;
 
-      const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-        const nextImage = new window.Image();
-        nextImage.onload = () => resolve(nextImage);
-        nextImage.onerror = () => reject(new Error("Could not decode rendered PDF image."));
-        nextImage.src = canvas.toDataURL("image/png");
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((result) => {
+          if (result) resolve(result);
+          else reject(new Error("Could not encode rendered PDF image."));
+        }, "image/png");
       });
 
-      setBackgroundImage(image);
-      setBackgroundSourceName(file.name);
+      onBackgroundChange({ blob, name: file.name });
       await pdf.destroy();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to load PDF.";
@@ -249,8 +281,7 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
   };
 
   const clearBackground = () => {
-    setBackgroundImage(null);
-    setBackgroundSourceName(null);
+    onBackgroundChange(null);
     setBackgroundError(null);
   };
 
@@ -305,16 +336,16 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
             onClick={() => fileInputRef.current?.click()}
             disabled={isBackgroundLoading}
           >
-            {isBackgroundLoading ? "Loading PDF..." : backgroundImage ? "Replace PDF" : "Upload PDF"}
+            {isBackgroundLoading ? "Loading PDF..." : background ? "Replace PDF" : "Upload PDF"}
           </Button>
-          {backgroundImage ? (
+          {background ? (
             <Button variant="ghost-danger" size="sm" icon={X} onClick={clearBackground}>
               Remove PDF
             </Button>
           ) : null}
-          {backgroundSourceName ? (
-            <span className="max-w-64 truncate text-xs font-medium text-slate-500" title={backgroundSourceName}>
-              {backgroundSourceName}
+          {background?.name ? (
+            <span className="max-w-64 truncate text-xs font-medium text-slate-500" title={background.name}>
+              {background.name}
             </span>
           ) : null}
         </div>
@@ -359,9 +390,9 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
         className="w-full rounded-xl border border-slate-300"
       >
         <Layer listening={false}>
-          {backgroundImage && backgroundPlacement ? (
+          {derivedBackgroundImage && backgroundPlacement ? (
             <KonvaImage
-              image={backgroundImage}
+              image={derivedBackgroundImage}
               x={backgroundPlacement.x}
               y={backgroundPlacement.y}
               width={backgroundPlacement.width}
@@ -403,7 +434,7 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
         description="This removes every pen and eraser stroke on this drawing. Defect markers are not affected."
         confirmLabel="Clear"
         onConfirm={() => {
-          setLines([]);
+          onLinesChange([]);
           onClearStrokes?.();
           setIsClearDialogOpen(false);
         }}
