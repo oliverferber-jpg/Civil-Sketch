@@ -3,9 +3,9 @@ import type { PlacedDefect } from "../../types/defect";
 
 type Point = { x: number; y: number };
 
-export function useDefectPlacement() {
+export function useDefectPlacement(initialPlacedDefects: PlacedDefect[] = []) {
   const [armedDefectTypeId, setArmedDefectTypeId] = useState<string | null>(null);
-  const [placedDefects, setPlacedDefects] = useState<PlacedDefect[]>([]);
+  const [placedDefects, setPlacedDefects] = useState<PlacedDefect[]>(initialPlacedDefects);
   const [pendingPosition, setPendingPosition] = useState<Point | null>(null);
 
   const armDefectType = (id: string) => {
