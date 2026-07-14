@@ -91,14 +91,9 @@ export default function App() {
     setProjectError(null);
 
     try {
-<<<<<<< HEAD
-      await createDrawing(selectedProjectId, {
-        title: name,
-=======
       const title = `New drawing ${new Date().toLocaleTimeString()}`;
       const drawing = await createDrawing(selectedProjectId, {
         title,
->>>>>>> 7ae9880 (Add local IndexedDB persistence for drawing canvas state)
         angle: "Front view",
         status: "Draft",
         notes: "",

@@ -397,7 +397,6 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
               aria-label={`Select ${swatch.value} drawing color`}
               onClick={() => setColor(swatch.value)}
             />
-            />
           ))}
         </div>
       </div>
