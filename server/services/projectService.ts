@@ -39,6 +39,10 @@ type CreateDrawingInput = {
   notes?: string;
 };
 
+type RenameDrawingInput = {
+  title: string;
+};
+
 export async function getProjectSummaries(userId: string): Promise<ProjectSummary[]> {
   const projects = await prisma.project.findMany({
     where: { userId },
@@ -192,10 +196,114 @@ export async function createDrawing(
   };
 }
 
+export async function renameDrawing(
+  userId: string,
+  projectId: string,
+  drawingId: string,
+  input: RenameDrawingInput,
+): Promise<DrawingSummary | null> {
+  const project = await prisma.project.findUnique({
+    where: { id: projectId, userId },
+    select: { id: true },
+  });
+
+  if (!project) {
+    return null;
+  }
+
+  const existingDrawing = await prisma.drawing.findFirst({
+    where: {
+      id: drawingId,
+      projectId,
+    },
+    select: { id: true },
+  });
+
+  if (!existingDrawing) {
+    return null;
+  }
+
+  const drawing = await prisma.drawing.update({
+    where: { id: drawingId },
+    data: {
+      title: input.title,
+      updatedAt: "just now",
+    },
+    select: {
+      id: true,
+      title: true,
+      angle: true,
+      status: true,
+      updatedAt: true,
+      notes: true,
+    },
+  });
+
+  await prisma.project.update({
+    where: { id: projectId },
+    data: {
+      lastUpdated: "just now",
+    },
+  });
+
+  return {
+    id: drawing.id,
+    title: drawing.title,
+    angle: drawing.angle ?? "",
+    status: drawing.status ?? "",
+    updatedAt: drawing.updatedAt ?? "",
+    notes: drawing.notes ?? "",
+  };
+}
+
+export async function deleteDrawing(
+  userId: string,
+  projectId: string,
+  drawingId: string,
+): Promise<boolean> {
+  const project = await prisma.project.findUnique({
+    where: { id: projectId, userId },
+    select: { id: true },
+  });
+
+  if (!project) {
+    return false;
+  }
+
+  const existingDrawing = await prisma.drawing.findFirst({
+    where: {
+      id: drawingId,
+      projectId,
+    },
+    select: { id: true },
+  });
+
+  if (!existingDrawing) {
+    return false;
+  }
+
+  await prisma.drawing.delete({
+    where: { id: drawingId },
+  });
+
+  await prisma.project.update({
+    where: { id: projectId },
+    data: {
+      drawingCount: {
+        decrement: 1,
+      },
+      lastUpdated: "just now",
+    },
+  });
+
+  return true;
+}
+
 export type {
   ProjectDetail,
   ProjectSummary,
   DrawingSummary,
   CreateProjectInput,
   CreateDrawingInput,
+  RenameDrawingInput,
 };
