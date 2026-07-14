@@ -2,13 +2,13 @@
 
 ## Project Overview
 
-An app for bridge inspectors to use in the field, replacing paper-based defect marking. Inspectors upload bridge face diagrams in advance, then draw directly on top of them during inspection to mark measurements, features, and defects. The app must work fully offline in the field and sync to the cloud when connectivity returns.
+An app for bridge inspectors to use in the field, replacing paper-based defect marking. Inspectors upload bridge face diagrams in advance, then draw directly on top of them during inspection to mark measurements, features, and defects. The app must work fully offline in the field and sync to the cloud when connectivity returns. We are working on this as a team.
 
 ## Tech Stack
 
 - **Frontend:** React + TypeScript, built with Vite, styled with Tailwind CSS
 - **Backend:** Node.js API server (REST) — sits between the frontend and the database, since PostgreSQL (unlike Firestore) can't be reached directly from client code. **As of 2026-07-14**, the real Express 5 + Prisma backend from `origin/backendData` (`server/index.ts` mounting a `projects` router, Prisma-backed service layer) has been merged onto `integration/merge-backend-data` alongside `main`'s frontend work. See [Backend Scaffold](#backend-scaffold) for what's implemented and what's still needed before it's runnable (local Postgres + first migration).
-- **Database:** PostgreSQL, via Prisma. Schema exists (`prisma/schema.prisma`, `Project`/`Drawing` models) but has never been migrated — no `prisma/migrations/` directory, no DB provisioned yet. **Decided 2026-07-14:** local/dev Postgres is a hosted **Neon** free-tier project, not Docker Compose, a native install, or Supabase — production will use a managed Postgres regardless, so this matches dev to the real deployment target from day one. See the "Get the backend running" roadmap for the full rationale and provisioning steps.
+- **Database:** PostgreSQL, via Prisma. Schema exists (`prisma/schema.prisma`, `Project`/`Drawing` models) but has never been migrated — no `prisma/migrations/` directory, no DB provisioned yet. **Decided 2026-07-14:** local/dev Postgres is a hosted **Neon** free-tier project, not Docker Compose, a native install, or Supabase — production will use a managed Postgres regardless, so this matches dev to the real deployment target from day one. See the "Get the backend running" roadmap for the full rationale and provisioning steps. everyone has the link to my neon account
 - **File storage:** Local disk for now (early development). PostgreSQL isn't well suited to storing binary files directly. Must be swapped for persistent cloud object storage (e.g. Cloudflare R2 or AWS S3) before deploying anywhere with ephemeral disks — most hosting platforms (Render, Fly, Railway, Heroku, etc.) don't persist local disk across redeploys. Keep local-disk file access isolated behind a small storage interface so this swap is cheap later.
 - **Version Control:** GitHub
 
