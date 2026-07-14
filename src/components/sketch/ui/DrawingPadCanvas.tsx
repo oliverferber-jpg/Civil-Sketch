@@ -1,7 +1,7 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
-import { Stage, Layer, Line } from "react-konva";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { Stage, Layer, Line, Image as KonvaImage } from "react-konva";
 import type Konva from "konva";
-import { Eraser, Pencil, Trash2, Undo2 } from "lucide-react";
+import { Eraser, FileUp, Pencil, Trash2, Undo2, X } from "lucide-react";
 import type { DefectType, PlacedDefect } from "../../../types/defect";
 import DefectMarkerLayer from "../../../features/defects/DefectMarkerLayer";
 import { Button, Card, ConfirmDialog } from "../../ui";
@@ -63,8 +63,30 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
   const [lines, setLines] = useState<DrawLine[]>([]);
   const [stageSize, setStageSize] = useState({ width: 900, height: 600 });
   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
+  const [backgroundImage, setBackgroundImage] = useState<HTMLImageElement | null>(null);
+  const [backgroundSourceName, setBackgroundSourceName] = useState<string | null>(null);
+  const [isBackgroundLoading, setIsBackgroundLoading] = useState(false);
+  const [backgroundError, setBackgroundError] = useState<string | null>(null);
   const isDrawing = useRef(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const backgroundPlacement = useMemo(() => {
+    if (!backgroundImage) return null;
+
+    const widthRatio = stageSize.width / backgroundImage.width;
+    const heightRatio = stageSize.height / backgroundImage.height;
+    const scale = Math.min(widthRatio, heightRatio);
+    const width = backgroundImage.width * scale;
+    const height = backgroundImage.height * scale;
+
+    return {
+      x: (stageSize.width - width) / 2,
+      y: (stageSize.height - height) / 2,
+      width,
+      height,
+    };
+  }, [backgroundImage, stageSize.height, stageSize.width]);
 
   useImperativeHandle(
     ref,
@@ -160,6 +182,68 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [armedDefectTypeId, onCancelPending]);
 
+  const handlePdfSelection = async (file: File | null) => {
+    if (!file) return;
+
+    setIsBackgroundLoading(true);
+    setBackgroundError(null);
+
+    try {
+      const [pdfModule, workerModule] = await Promise.all([import("pdfjs-dist"), import("pdfjs-dist/build/pdf.worker.min.mjs?url")]);
+      const { GlobalWorkerOptions, getDocument } = pdfModule;
+
+      if (!GlobalWorkerOptions.workerSrc) {
+        GlobalWorkerOptions.workerSrc = workerModule.default;
+      }
+
+      const data = await file.arrayBuffer();
+      const loadingTask = getDocument({ data });
+      const pdf = await loadingTask.promise;
+      const page = await pdf.getPage(1);
+      const baseViewport = page.getViewport({ scale: 1 });
+      const maxEdge = Math.max(baseViewport.width, baseViewport.height);
+      const targetEdge = 2200;
+      const renderScale = Math.max(1, Math.min(2.5, targetEdge / maxEdge));
+      const viewport = page.getViewport({ scale: renderScale });
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+
+      if (!context) {
+        throw new Error("Could not initialize canvas context for PDF rendering.");
+      }
+
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+
+      await page.render({ canvasContext: context, viewport }).promise;
+
+      const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const nextImage = new window.Image();
+        nextImage.onload = () => resolve(nextImage);
+        nextImage.onerror = () => reject(new Error("Could not decode rendered PDF image."));
+        nextImage.src = canvas.toDataURL("image/png");
+      });
+
+      setBackgroundImage(image);
+      setBackgroundSourceName(file.name);
+      await pdf.destroy();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to load PDF.";
+      setBackgroundError(message);
+    } finally {
+      setIsBackgroundLoading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const clearBackground = () => {
+    setBackgroundImage(null);
+    setBackgroundSourceName(null);
+    setBackgroundError(null);
+  };
+
   return (
     <Card ref={containerRef}>
       <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -176,6 +260,41 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
           >
             Eraser
           </Button>
+        </div>
+
+        <div className="h-6 w-px bg-slate-200" />
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/pdf,.pdf"
+          className="hidden"
+          onChange={(event) => {
+            const selectedFile = event.target.files?.[0] ?? null;
+            void handlePdfSelection(selectedFile);
+          }}
+        />
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            icon={FileUp}
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isBackgroundLoading}
+          >
+            {isBackgroundLoading ? "Loading PDF..." : backgroundImage ? "Replace PDF" : "Upload PDF"}
+          </Button>
+          {backgroundImage ? (
+            <Button variant="ghost-danger" size="sm" icon={X} onClick={clearBackground}>
+              Remove PDF
+            </Button>
+          ) : null}
+          {backgroundSourceName ? (
+            <span className="max-w-64 truncate text-xs font-medium text-slate-500" title={backgroundSourceName}>
+              {backgroundSourceName}
+            </span>
+          ) : null}
         </div>
 
         <div className="h-6 w-px bg-slate-200" />
@@ -217,6 +336,18 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
         onPointerUp={handlePointerUp}
         className="w-full rounded-xl border border-slate-300"
       >
+        <Layer listening={false}>
+          {backgroundImage && backgroundPlacement ? (
+            <KonvaImage
+              image={backgroundImage}
+              x={backgroundPlacement.x}
+              y={backgroundPlacement.y}
+              width={backgroundPlacement.width}
+              height={backgroundPlacement.height}
+            />
+          ) : null}
+        </Layer>
+
         <Layer>
           {lines.map((line, i) => (
             <Line
@@ -230,6 +361,9 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
               globalCompositeOperation={line.tool === "eraser" ? "destination-out" : "source-over"}
             />
           ))}
+        </Layer>
+
+        <Layer>
           <DefectMarkerLayer
             placedDefects={placedDefects}
             defectTypes={defectTypes}
@@ -238,6 +372,8 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
           />
         </Layer>
       </Stage>
+
+      {backgroundError ? <p className="mt-2 text-sm text-rose-600">{backgroundError}</p> : null}
 
       <ConfirmDialog
         open={isClearDialogOpen}
