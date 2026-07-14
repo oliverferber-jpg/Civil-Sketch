@@ -48,7 +48,12 @@ export default function DrawingPadPage({ drawingId, title = "Untitled drawing", 
           Loading drawing...
         </div>
       ) : (
-        <DrawingPadWorkspace loadedRecord={loadedRecord} scheduleSave={scheduleSave} />
+        <DrawingPadWorkspace
+          loadedRecord={loadedRecord}
+          scheduleSave={scheduleSave}
+          title={title}
+          onBack={onBack}
+        />
       )}
     </div>
   );
@@ -57,9 +62,11 @@ export default function DrawingPadPage({ drawingId, title = "Untitled drawing", 
 type DrawingPadWorkspaceProps = {
   loadedRecord: DrawingPersistenceRecord;
   scheduleSave: (record: DrawingPersistenceRecord) => void;
+  title: string;
+  onBack?: () => void;
 };
 
-function DrawingPadWorkspace({ loadedRecord, scheduleSave }: DrawingPadWorkspaceProps) {
+function DrawingPadWorkspace({ loadedRecord, scheduleSave, title, onBack }: DrawingPadWorkspaceProps) {
   const {
     armedDefectTypeId,
     armDefectType,
@@ -114,6 +121,10 @@ function DrawingPadWorkspace({ loadedRecord, scheduleSave }: DrawingPadWorkspace
       <div className="flex flex-col gap-4">
         <DrawingPadCanvas
           ref={canvasRef}
+          lines={lines}
+          onLinesChange={setLines}
+          background={background}
+          onBackgroundChange={setBackground}
           armedDefectTypeId={armedDefectTypeId}
           onCanvasTap={handleCanvasTap}
           onStrokeComplete={pushStroke}

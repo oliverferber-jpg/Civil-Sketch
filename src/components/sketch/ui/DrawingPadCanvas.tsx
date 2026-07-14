@@ -268,7 +268,7 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
       canvas.width = Math.ceil(viewport.width);
       canvas.height = Math.ceil(viewport.height);
 
-      await page.render({ canvasContext: context, viewport }).promise;
+      await page.render({ canvasContext: context, viewport, canvas }).promise;
 
       const blob = await new Promise<Blob>((resolve, reject) => {
         canvas.toBlob((result) => {
@@ -278,7 +278,9 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
       });
 
       onBackgroundChange({ blob, name: file.name });
-      await pdf.destroy();
+      if (typeof (pdf as unknown as { destroy?: () => void }).destroy === "function") {
+        (pdf as unknown as { destroy?: () => void }).destroy?.();
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to load PDF.";
       setBackgroundError(message);
@@ -347,7 +349,7 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
               onClick={() => fileInputRef.current?.click()}
               disabled={isBackgroundLoading}
             >
-              {isBackgroundLoading ? "Loading PDF..." : backgroundImage ? "Replace PDF" : "Upload PDF"}
+              {isBackgroundLoading ? "Loading PDF..." : background ? "Replace PDF" : "Upload PDF"}
             </Button>
             <div className="min-w-[220px] flex-1">
               <DefectTypeDropdown
@@ -357,14 +359,14 @@ const DrawingPadCanvas = forwardRef<DrawingPadCanvasHandle, DrawingPadCanvasProp
                 onAddType={onAddType}
               />
             </div>
-            {backgroundImage ? (
+            {background ? (
               <Button variant="ghost-danger" size="sm" icon={X} onClick={clearBackground}>
                 Remove PDF
               </Button>
             ) : null}
-            {backgroundSourceName ? (
-              <span className="max-w-64 truncate text-xs font-medium text-slate-500" title={backgroundSourceName}>
-                {backgroundSourceName}
+            {background?.name ? (
+              <span className="max-w-64 truncate text-xs font-medium text-slate-500" title={background.name}>
+                {background.name}
               </span>
             ) : null}
           </div>
