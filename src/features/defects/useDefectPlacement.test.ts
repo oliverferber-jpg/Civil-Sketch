@@ -140,4 +140,13 @@ describe("useDefectPlacement", () => {
 
     expect(result.current.placedDefects.map((d) => d.id)).toEqual(remainingIds);
   });
+
+  it("seeds placedDefects from an initial value passed in", () => {
+    const initial = [
+      { id: "a", defectTypeId: "corrosion", position: { x: 5, y: 5 }, labelPosition: { x: 6, y: 6 } },
+    ];
+    const { result } = renderHook(() => useDefectPlacement(initial));
+
+    expect(result.current.placedDefects).toEqual(initial);
+  });
 });

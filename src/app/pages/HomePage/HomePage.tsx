@@ -21,6 +21,7 @@ export default function App() {
   const [view, setView] = useState<"start" | "project" | "drawing" | "api-test">("start");
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<ProjectDetail | null>(null);
+  const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState<string | null>(null);
@@ -90,13 +91,20 @@ export default function App() {
     setProjectError(null);
 
     try {
+<<<<<<< HEAD
       await createDrawing(selectedProjectId, {
         title: name,
+=======
+      const title = `New drawing ${new Date().toLocaleTimeString()}`;
+      const drawing = await createDrawing(selectedProjectId, {
+        title,
+>>>>>>> 7ae9880 (Add local IndexedDB persistence for drawing canvas state)
         angle: "Front view",
         status: "Draft",
         notes: "",
       });
 
+      setSelectedDrawingId(drawing.id);
       await loadProjectDetail(selectedProjectId);
       setView("drawing");
     } catch (error) {
@@ -186,7 +194,22 @@ export default function App() {
     }
 
     if (view === "drawing") {
-      return <DrawingPadPage title={selectedProject?.name} onBack={() => setView("project")} />;
+      if (!selectedDrawingId) {
+        return (
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
+            No drawing selected.
+          </div>
+        );
+      }
+
+      return (
+        <DrawingPadPage
+          key={selectedDrawingId}
+          drawingId={selectedDrawingId}
+          title={selectedProject?.name}
+          onBack={() => setView("project")}
+        />
+      );
     }
 
     if (view === "project") {
@@ -240,7 +263,7 @@ export default function App() {
             setProjectError(null);
           }}
           onSelectDrawing={(drawingId) => {
-            void drawingId;
+            setSelectedDrawingId(drawingId);
             setView("drawing");
           }}
           onStartNewDrawing={handleCreateDrawing}
@@ -306,6 +329,7 @@ export default function App() {
               setView("start");
               setSelectedProjectId(null);
               setSelectedProject(null);
+              setSelectedDrawingId(null);
               setProjects([]);
               setProjectsError(null);
               setProjectError(null);
