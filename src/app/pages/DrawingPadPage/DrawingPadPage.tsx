@@ -2,7 +2,6 @@ import { useRef } from "react";
 import { ArrowLeft } from "lucide-react";
 import DrawingPadCanvas, { type DrawingPadCanvasHandle } from "../../../components/sketch/ui/DrawingPadCanvas";
 import { Button } from "../../../components/ui";
-import DefectPanel from "../../../features/defects/DefectPanel";
 import { useDefectPlacement } from "../../../features/defects/useDefectPlacement";
 import { useDefectTypes } from "../../../features/defects/useDefectTypes";
 import { useUndoHistory } from "../../../features/canvas/useUndoHistory";
@@ -22,7 +21,7 @@ export default function DrawingPadPage({ title = "Untitled drawing", onBack }: D
     cancelPending,
     removeLastDefect,
   } = useDefectPlacement();
-  const { defectTypes, addType, renameType, removeType, isTypeInUse } = useDefectTypes(placedDefects);
+  const { defectTypes, addType } = useDefectTypes(placedDefects);
   const { canUndo, pushStroke, pushDefect, peekLast, popLast, removeAllOfType } = useUndoHistory();
   const canvasRef = useRef<DrawingPadCanvasHandle>(null);
 
@@ -57,35 +56,26 @@ export default function DrawingPadPage({ title = "Untitled drawing", onBack }: D
           </Button>
         ) : null}
       </div>
-      <div className="flex flex-col gap-4 lg:flex-row">
-        <div className="lg:flex-1">
-          <DrawingPadCanvas
-            ref={canvasRef}
-            armedDefectTypeId={armedDefectTypeId}
-            onCanvasTap={handleCanvasTap}
-            onStrokeComplete={pushStroke}
-            onClearStrokes={() => removeAllOfType("stroke")}
-            canUndo={canUndo}
-            onUndo={handleUndo}
-            placedDefects={placedDefects}
-            defectTypes={defectTypes}
-            pendingPosition={pendingPosition}
-            onCancelPending={cancelPending}
-            onToolSelect={() => {
-              if (armedDefectTypeId) {
-                armDefectType(armedDefectTypeId);
-              }
-            }}
-          />
-        </div>
-        <DefectPanel
-          defectTypes={defectTypes}
+      <div className="flex flex-col gap-4">
+        <DrawingPadCanvas
+          ref={canvasRef}
           armedDefectTypeId={armedDefectTypeId}
+          onCanvasTap={handleCanvasTap}
+          onStrokeComplete={pushStroke}
+          onClearStrokes={() => removeAllOfType("stroke")}
+          canUndo={canUndo}
+          onUndo={handleUndo}
+          placedDefects={placedDefects}
+          defectTypes={defectTypes}
+          pendingPosition={pendingPosition}
+          onCancelPending={cancelPending}
+          onToolSelect={() => {
+            if (armedDefectTypeId) {
+              armDefectType(armedDefectTypeId);
+            }
+          }}
           onArmDefectType={armDefectType}
           onAddType={addType}
-          onRenameType={renameType}
-          onRemoveType={removeType}
-          isTypeInUse={isTypeInUse}
         />
       </div>
     </div>
