@@ -39,8 +39,9 @@ type CreateDrawingInput = {
   notes?: string;
 };
 
-export async function getProjectSummaries(): Promise<ProjectSummary[]> {
+export async function getProjectSummaries(userId: string): Promise<ProjectSummary[]> {
   const projects = await prisma.project.findMany({
+    where: { userId },
     orderBy: { name: "asc" },
     select: {
       id: true,
@@ -62,9 +63,9 @@ export async function getProjectSummaries(): Promise<ProjectSummary[]> {
   }));
 }
 
-export async function getProjectById(projectId: string): Promise<ProjectDetail | null> {
+export async function getProjectById(userId: string, projectId: string): Promise<ProjectDetail | null> {
   const project = await prisma.project.findUnique({
-    where: { id: projectId },
+    where: { id: projectId, userId },
     select: {
       id: true,
       name: true,
@@ -106,10 +107,11 @@ export async function getProjectById(projectId: string): Promise<ProjectDetail |
   };
 }
 
-export async function createProject(input: CreateProjectInput): Promise<ProjectSummary> {
+export async function createProject(userId: string, input: CreateProjectInput): Promise<ProjectSummary> {
   const project = await prisma.project.create({
     data: {
       id: crypto.randomUUID(),
+      userId,
       name: input.name,
       folder: input.folder,
       description: input.description,
@@ -137,11 +139,12 @@ export async function createProject(input: CreateProjectInput): Promise<ProjectS
 }
 
 export async function createDrawing(
+  userId: string,
   projectId: string,
   input: CreateDrawingInput
 ): Promise<DrawingSummary | null> {
   const project = await prisma.project.findUnique({
-    where: { id: projectId },
+    where: { id: projectId, userId },
     select: { id: true },
   });
 

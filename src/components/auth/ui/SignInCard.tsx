@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { loginWithGoogle } from "../../../api/auth";
+import { loginDemo, loginWithGoogle } from "../../../api/auth";
 import type { UserProfile } from "../../../types/user";
 
 type SignInPageProps = {
@@ -85,13 +85,14 @@ export default function SignInPage({ onSuccess }: SignInPageProps) {
     document.body.appendChild(script);
   }, [clientId, onSuccess]);
 
-  const handleDemoSignIn = () => {
-    onSuccess({
-      id: "demo-user",
-      name: "Demo User",
-      email: "demo@civilsketch.dev",
-      picture: undefined,
-    });
+  const handleDemoSignIn = async () => {
+    try {
+      const user = await loginDemo();
+      onSuccess(user);
+    } catch {
+      setStatus("error");
+      setMessage("We could not sign you in as a demo user. Please try again.");
+    }
   };
 
   return (

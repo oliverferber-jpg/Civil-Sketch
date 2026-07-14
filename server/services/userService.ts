@@ -45,6 +45,16 @@ export async function upsertUserFromGoogle(input: UpsertUserInput): Promise<Publ
   };
 }
 
+const DEMO_GOOGLE_SUB = "demo-google-sub";
+
+export async function upsertDemoUser(): Promise<PublicUser> {
+  return upsertUserFromGoogle({
+    googleSub: DEMO_GOOGLE_SUB,
+    email: "demo@civilsketch.dev",
+    name: "Demo User",
+  });
+}
+
 export async function getUserById(userId: string): Promise<PublicUser | null> {
   const user = await prisma.user.findUnique({
     where: { id: userId },

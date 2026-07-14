@@ -2,7 +2,7 @@ import { Router } from "express";
 import { verifyGoogleIdToken } from "../auth/googleVerify";
 import { signSessionToken } from "../auth/session";
 import { requireAuth } from "../middleware/requireAuth";
-import { getUserById, upsertUserFromGoogle } from "../services/userService";
+import { getUserById, upsertDemoUser, upsertUserFromGoogle } from "../services/userService";
 
 const router = Router();
 
@@ -39,6 +39,30 @@ router.post("/google", async (req, res) => {
   } catch (error) {
     console.error("Google sign-in verification failed", error);
     res.status(401).json({ error: "Invalid Google credential" });
+  }
+});
+
+router.post("/demo", async (_req, res) => {
+  if (process.env.NODE_ENV === "production") {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+
+  try {
+    const user = await upsertDemoUser();
+    const sessionToken = signSessionToken({ sub: user.id, email: user.email });
+
+    res.cookie(SESSION_COOKIE, sessionToken, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: SESSION_MAX_AGE_MS,
+    });
+
+    res.status(200).json({ user });
+  } catch (error) {
+    console.error("Demo sign-in failed", error);
+    res.status(500).json({ error: "Could not sign in as demo user" });
   }
 });
 

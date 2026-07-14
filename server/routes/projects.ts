@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireAuth } from "../middleware/requireAuth";
 import {
   createDrawing,
   createProject,
@@ -8,8 +9,10 @@ import {
 
 const router = Router();
 
-router.get("/", async (_req, res) => {
-  const projects = await getProjectSummaries();
+router.use(requireAuth);
+
+router.get("/", async (req, res) => {
+  const projects = await getProjectSummaries(req.user!.id);
   res.json(projects);
 });
 
@@ -24,7 +27,7 @@ router.post("/", async (req, res) => {
   }
 
   try {
-    const project = await createProject({
+    const project = await createProject(req.user!.id, {
       name,
       folder: folder || "Uncategorized",
       description,
@@ -49,7 +52,7 @@ router.post("/:projectId/drawings", async (req, res) => {
   }
 
   try {
-    const drawing = await createDrawing(req.params.projectId, {
+    const drawing = await createDrawing(req.user!.id, req.params.projectId, {
       title,
       angle,
       status,
@@ -69,7 +72,7 @@ router.post("/:projectId/drawings", async (req, res) => {
 });
 
 router.get("/:projectId", async (req, res) => {
-  const project = await getProjectById(req.params.projectId);
+  const project = await getProjectById(req.user!.id, req.params.projectId);
 
   if (!project) {
     res.status(404).json({ error: "Project not found" });

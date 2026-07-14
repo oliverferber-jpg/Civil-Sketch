@@ -14,6 +14,7 @@ vi.mock("../../../api/projects", () => ({
 vi.mock("../../../api/auth", () => ({
   fetchCurrentUser: vi.fn().mockResolvedValue(null),
   logout: vi.fn().mockResolvedValue(undefined),
+  loginDemo: vi.fn().mockResolvedValue({ id: "demo-user", name: "Demo User", email: "demo@civilsketch.dev" }),
 }));
 
 const mockedFetchProjects = vi.mocked(fetchProjects);
