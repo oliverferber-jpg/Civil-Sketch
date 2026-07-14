@@ -11,6 +11,11 @@ vi.mock("../../../api/projects", () => ({
   createDrawing: vi.fn(),
 }));
 
+vi.mock("../../../api/auth", () => ({
+  fetchCurrentUser: vi.fn().mockResolvedValue(null),
+  logout: vi.fn().mockResolvedValue(undefined),
+}));
+
 const mockedFetchProjects = vi.mocked(fetchProjects);
 
 const sampleProjects: ProjectSummary[] = [

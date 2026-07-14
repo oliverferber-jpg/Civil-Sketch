@@ -1,10 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-
-type UserProfile = {
-  name: string;
-  email: string;
-  picture?: string;
-};
+import { loginWithGoogle } from "../../../api/auth";
+import type { UserProfile } from "../../../types/user";
 
 type SignInPageProps = {
   onSuccess: (user: UserProfile) => void;
@@ -39,7 +35,7 @@ export default function SignInPage({ onSuccess }: SignInPageProps) {
 
       window.google.accounts.id.initialize({
         client_id: clientId,
-        callback: (response: { credential?: string }) => {
+        callback: async (response: { credential?: string }) => {
           if (!response.credential) {
             setStatus("error");
             setMessage("Google sign-in was canceled.");
@@ -47,22 +43,11 @@ export default function SignInPage({ onSuccess }: SignInPageProps) {
           }
 
           try {
-            const payload = JSON.parse(
-              atob(response.credential.split(".")[1])
-            ) as {
-              name?: string;
-              email?: string;
-              picture?: string;
-            };
-
-            onSuccess({
-              name: payload.name ?? "Google User",
-              email: payload.email ?? "unknown@example.com",
-              picture: payload.picture,
-            });
+            const user = await loginWithGoogle(response.credential);
+            onSuccess(user);
           } catch {
             setStatus("error");
-            setMessage("We could not read your Google profile. Please try again.");
+            setMessage("We could not verify your Google sign-in. Please try again.");
           }
         },
       });
@@ -102,6 +87,7 @@ export default function SignInPage({ onSuccess }: SignInPageProps) {
 
   const handleDemoSignIn = () => {
     onSuccess({
+      id: "demo-user",
       name: "Demo User",
       email: "demo@civilsketch.dev",
       picture: undefined,

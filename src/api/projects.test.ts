@@ -25,7 +25,7 @@ describe("projects API client", () => {
     const result = await fetchProjects();
 
     expect(result).toEqual(projects);
-    expect(fetchMock).toHaveBeenCalledWith("/api/projects");
+    expect(fetchMock).toHaveBeenCalledWith("/api/projects", { credentials: "include" });
   });
 
   it("fetchProjects throws when the response is not ok", async () => {
@@ -50,7 +50,7 @@ describe("projects API client", () => {
     const result = await fetchProjectById("1");
 
     expect(result).toEqual(detail);
-    expect(fetchMock).toHaveBeenCalledWith("/api/projects/1");
+    expect(fetchMock).toHaveBeenCalledWith("/api/projects/1", { credentials: "include" });
   });
 
   it("createProject POSTs the input as JSON and parses the response", async () => {
@@ -65,6 +65,7 @@ describe("projects API client", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify(input),
     });
   });
@@ -81,6 +82,7 @@ describe("projects API client", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/projects/1/drawings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify(input),
     });
   });

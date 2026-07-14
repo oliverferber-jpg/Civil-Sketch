@@ -31,3 +31,14 @@ model Drawing {
 
   @@map("drawings")
 }
+
+model User {
+  id        String   @id
+  email     String   @unique
+  name      String
+  picture   String?
+  googleSub String   @unique @map("google_sub")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("users")
+}

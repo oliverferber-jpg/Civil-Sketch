@@ -1,17 +1,13 @@
 import { useEffect, useState } from "react";
+import { fetchCurrentUser, logout } from "../../../api/auth";
 import { createDrawing, createProject, fetchProjectById, fetchProjects } from "../../../api/projects";
 import type { ProjectDetail, ProjectSummary } from "../../../types/projects";
+import type { UserProfile } from "../../../types/user";
 import ApiTestPage from "../ApiTestPage/ApiTestPage";
 import DrawingPadPage from "../DrawingPadPage/DrawingPadPage";
 import ProjectPage from "../ProjectPage/ProjectPage";
 import SignInPage from "../SignInPage/SignInPage";
 import StartPage from "../StartPage/StartPage";
-
-type UserProfile = {
-  name: string;
-  email: string;
-  picture?: string;
-};
 
 export default function App() {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -24,6 +20,12 @@ export default function App() {
   const [projectLoading, setProjectLoading] = useState(false);
   const [projectError, setProjectError] = useState<string | null>(null);
   const [creatingDrawing, setCreatingDrawing] = useState(false);
+
+  useEffect(() => {
+    fetchCurrentUser()
+      .then(setUser)
+      .catch(() => setUser(null));
+  }, []);
 
   const loadProjects = async () => {
     setProjectsLoading(true);
@@ -236,6 +238,7 @@ export default function App() {
           ) : null}
           <button
             onClick={() => {
+              void logout();
               setUser(null);
               setView("start");
               setSelectedProjectId(null);

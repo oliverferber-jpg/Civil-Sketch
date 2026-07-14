@@ -5,22 +5,15 @@ import type {
   ProjectDetail,
   ProjectSummary,
 } from "../types/projects";
-
-async function parseJsonResponse<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    throw new Error(`API request failed: ${response.status}`);
-  }
-
-  return (await response.json()) as T;
-}
+import { parseJsonResponse } from "./http";
 
 export async function fetchProjects(): Promise<ProjectSummary[]> {
-  const response = await fetch("/api/projects");
+  const response = await fetch("/api/projects", { credentials: "include" });
   return parseJsonResponse<ProjectSummary[]>(response);
 }
 
 export async function fetchProjectById(projectId: string): Promise<ProjectDetail> {
-  const response = await fetch(`/api/projects/${projectId}`);
+  const response = await fetch(`/api/projects/${projectId}`, { credentials: "include" });
   return parseJsonResponse<ProjectDetail>(response);
 }
 
@@ -30,6 +23,7 @@ export async function createProject(input: CreateProjectInput): Promise<ProjectS
     headers: {
       "Content-Type": "application/json",
     },
+    credentials: "include",
     body: JSON.stringify(input),
   });
 
@@ -45,6 +39,7 @@ export async function createDrawing(
     headers: {
       "Content-Type": "application/json",
     },
+    credentials: "include",
     body: JSON.stringify(input),
   });
 
