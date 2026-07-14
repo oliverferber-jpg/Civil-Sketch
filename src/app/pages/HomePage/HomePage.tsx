@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import { fetchCurrentUser, logout } from "../../../api/auth";
-import { createDrawing, createProject, fetchProjectById, fetchProjects } from "../../../api/projects";
+import {
+  createDrawing,
+  createProject,
+  deleteDrawing,
+  fetchProjectById,
+  fetchProjects,
+  renameDrawing,
+} from "../../../api/projects";
 import type { ProjectDetail, ProjectSummary } from "../../../types/projects";
 import type { UserProfile } from "../../../types/user";
 import ApiTestPage from "../ApiTestPage/ApiTestPage";
@@ -75,13 +82,17 @@ export default function App() {
       return;
     }
 
+    const name = window.prompt("Name this drawing", `New drawing ${new Date().toLocaleTimeString()}`)?.trim();
+    if (!name) {
+      return;
+    }
+
     setCreatingDrawing(true);
     setProjectError(null);
 
     try {
-      const title = `New drawing ${new Date().toLocaleTimeString()}`;
       const drawing = await createDrawing(selectedProjectId, {
-        title,
+        title: name,
         angle: "Front view",
         status: "Draft",
         notes: "",
@@ -95,6 +106,56 @@ export default function App() {
       setProjectError("Could not create a new drawing.");
     } finally {
       setCreatingDrawing(false);
+    }
+  };
+
+  const handleRenameDrawing = async (drawingId: string) => {
+    if (!selectedProjectId || !selectedProject) {
+      return;
+    }
+
+    const drawing = selectedProject.drawings.find((item) => item.id === drawingId);
+    if (!drawing) {
+      return;
+    }
+
+    const nextName = window.prompt("Rename drawing", drawing.title)?.trim();
+    if (!nextName) {
+      return;
+    }
+
+    try {
+      await renameDrawing(selectedProjectId, drawingId, nextName);
+      await loadProjectDetail(selectedProjectId);
+      await loadProjects();
+    } catch (error) {
+      console.error("Failed to rename drawing", error);
+      setProjectError("Could not rename this drawing.");
+    }
+  };
+
+  const handleDeleteDrawing = async (drawingId: string) => {
+    if (!selectedProjectId || !selectedProject) {
+      return;
+    }
+
+    const drawing = selectedProject.drawings.find((item) => item.id === drawingId);
+    if (!drawing) {
+      return;
+    }
+
+    const confirmed = window.confirm(`Delete "${drawing.title}"? This cannot be undone.`);
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await deleteDrawing(selectedProjectId, drawingId);
+      await loadProjectDetail(selectedProjectId);
+      await loadProjects();
+    } catch (error) {
+      console.error("Failed to delete drawing", error);
+      setProjectError("Could not delete this drawing.");
     }
   };
 
@@ -200,6 +261,8 @@ export default function App() {
             setView("drawing");
           }}
           onStartNewDrawing={handleCreateDrawing}
+          onRenameDrawing={handleRenameDrawing}
+          onDeleteDrawing={handleDeleteDrawing}
           creatingDrawing={creatingDrawing}
         />
       );

@@ -1,4 +1,4 @@
-import { Image, Plus } from "lucide-react";
+import { Image, Pencil, Plus, Trash2 } from "lucide-react";
 import type { DrawingSummary, ProjectDetail } from "../../../types/projects";
 
 type ProjectPageProps = {
@@ -6,6 +6,8 @@ type ProjectPageProps = {
   onBack: () => void;
   onSelectDrawing: (drawingId: string) => void;
   onStartNewDrawing: () => Promise<void>;
+  onRenameDrawing: (drawingId: string) => Promise<void>;
+  onDeleteDrawing: (drawingId: string) => Promise<void>;
   creatingDrawing: boolean;
 };
 
@@ -14,6 +16,8 @@ export default function ProjectPage({
   onBack,
   onSelectDrawing,
   onStartNewDrawing,
+  onRenameDrawing,
+  onDeleteDrawing,
   creatingDrawing,
 }: ProjectPageProps) {
   return (
@@ -36,7 +40,13 @@ export default function ProjectPage({
 
       <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
         {project.drawings.map((drawing) => (
-          <DrawingTile key={drawing.id} drawing={drawing} onSelect={onSelectDrawing} />
+          <DrawingTile
+            key={drawing.id}
+            drawing={drawing}
+            onSelect={onSelectDrawing}
+            onRename={onRenameDrawing}
+            onDelete={onDeleteDrawing}
+          />
         ))}
         <NewDrawingTile onCreate={onStartNewDrawing} creatingDrawing={creatingDrawing} />
       </div>
@@ -47,22 +57,41 @@ export default function ProjectPage({
 function DrawingTile({
   drawing,
   onSelect,
+  onRename,
+  onDelete,
 }: {
   drawing: DrawingSummary;
   onSelect: (id: string) => void;
+  onRename: (id: string) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
 }) {
   return (
-    <button
-      type="button"
-      onClick={() => onSelect(drawing.id)}
-      title={drawing.title}
-      className="group flex flex-col gap-2 rounded-2xl p-3 text-left transition hover:bg-slate-100"
-    >
-      <div className="flex aspect-[4/3] items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition group-hover:bg-slate-200">
-        <Image size={40} strokeWidth={1.5} />
-      </div>
+    <div className="group flex flex-col gap-2 rounded-2xl p-3 text-left transition hover:bg-slate-100">
+      <button type="button" onClick={() => onSelect(drawing.id)} title={drawing.title} className="w-full text-left">
+        <div className="flex aspect-[4/3] items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition group-hover:bg-slate-200">
+          <Image size={40} strokeWidth={1.5} />
+        </div>
+      </button>
       <span className="line-clamp-2 text-sm font-medium text-slate-700">{drawing.title}</span>
-    </button>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => void onRename(drawing.id)}
+          className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-200"
+        >
+          <Pencil size={12} />
+          Rename
+        </button>
+        <button
+          type="button"
+          onClick={() => void onDelete(drawing.id)}
+          className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-600 transition hover:bg-rose-100"
+        >
+          <Trash2 size={12} />
+          Delete
+        </button>
+      </div>
+    </div>
   );
 }
 

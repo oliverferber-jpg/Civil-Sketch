@@ -3,8 +3,10 @@ import { requireAuth } from "../middleware/requireAuth";
 import {
   createDrawing,
   createProject,
+  deleteDrawing,
   getProjectById,
   getProjectSummaries,
+  renameDrawing,
 } from "../services/projectService";
 
 const router = Router();
@@ -80,6 +82,47 @@ router.get("/:projectId", async (req, res) => {
   }
 
   res.json(project);
+});
+
+router.patch("/:projectId/drawings/:drawingId", async (req, res) => {
+  const title = typeof req.body?.title === "string" ? req.body.title.trim() : "";
+
+  if (!title) {
+    res.status(400).json({ error: "title is required" });
+    return;
+  }
+
+  try {
+    const drawing = await renameDrawing(req.user!.id, req.params.projectId, req.params.drawingId, {
+      title,
+    });
+
+    if (!drawing) {
+      res.status(404).json({ error: "Drawing not found" });
+      return;
+    }
+
+    res.json(drawing);
+  } catch (error) {
+    console.error("Failed to rename drawing", error);
+    res.status(500).json({ error: "Could not rename drawing" });
+  }
+});
+
+router.delete("/:projectId/drawings/:drawingId", async (req, res) => {
+  try {
+    const deleted = await deleteDrawing(req.user!.id, req.params.projectId, req.params.drawingId);
+
+    if (!deleted) {
+      res.status(404).json({ error: "Drawing not found" });
+      return;
+    }
+
+    res.json({ ok: true });
+  } catch (error) {
+    console.error("Failed to delete drawing", error);
+    res.status(500).json({ error: "Could not delete drawing" });
+  }
 });
 
 export default router;
